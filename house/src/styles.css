@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cormorant Garamond", "Iowan Old Style", Palatino, serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #08060b;
+  --color-surface: #120e18;
+  --color-surface-2: #1c1624;
+  --color-ivory: #f3ead6;
+  --color-muted: #b7a894;
+  --color-subtle: #7c7166;
+  --color-gold: #c9a227;
+  --color-gold-soft: #e0c56a;
+  --color-gold-dim: #8a7019;
+  --color-purple: #6b3fa0;
+  --color-purple-deep: #3a1f5c;
+  --color-purple-mid: #8b5cbf;
+  --color-line: #3a3120;
+  --color-danger: #c45c5c;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.75rem;
+
+  --text-display: clamp(2.75rem, 1.1rem + 7vw, 5.75rem);
+  --text-title: clamp(1.85rem, 1.1rem + 2.6vw, 3.15rem);
+  --text-kicker: 0.72rem;
+
+  --tracking-display: -0.03em;
+  --tracking-luxury: 0.28em;
+  --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --shadow-frame: 0 0 0 1px #c9a22738, 0 24px 48px #00000088;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5.5rem;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-ivory);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: var(--tracking-display);
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer utilities {
+  .grain {
+    position: relative;
+  }
+
+  .grain::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    opacity: 0.045;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .starfield {
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(1px 1px at 12% 18%, #f3ead655 50%, transparent 51%),
+      radial-gradient(1px 1px at 28% 72%, #c9a22766 50%, transparent 51%),
+      radial-gradient(1px 1px at 67% 24%, #f3ead644 50%, transparent 51%),
+      radial-gradient(1px 1px at 81% 64%, #c9a22755 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 46% 40%, #f3ead633 50%, transparent 51%),
+      radial-gradient(1px 1px at 91% 12%, #8b5cbf55 50%, transparent 51%),
+      radial-gradient(1px 1px at 8% 88%, #c9a22744 50%, transparent 51%);
+  }
+
+  .user-chip {
+    color: var(--color-ivory);
+  }
+
+  .user-chip .h-8 {
+    background-color: var(--color-purple-deep);
+    color: var(--color-gold-soft);
+    box-shadow: 0 0 0 1px #c9a22755;
+  }
+
+  .user-chip button {
+    color: var(--color-gold);
+  }
+}

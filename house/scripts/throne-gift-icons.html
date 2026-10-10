@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Outfit:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #08060b;
+        --surface: #120e18;
+        --ivory: #f3ead6;
+        --gold: #c9a227;
+        --gold-soft: #e0c56a;
+        --gold-dim: #8a7019;
+        --purple: #6b3fa0;
+        --purple-deep: #3a1f5c;
+        --purple-mid: #8b5cbf;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 1200px; height: 1200px; overflow: hidden; background: var(--bg); }
+      .card {
+        position: relative;
+        width: 1200px;
+        height: 1200px;
+        background:
+          radial-gradient(ellipse 70% 55% at 50% 42%, #3a1f5c88 0%, transparent 62%),
+          radial-gradient(ellipse 40% 30% at 78% 18%, #6b3fa033 0%, transparent 70%),
+          var(--bg);
+        color: var(--ivory);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: 88px 96px 80px;
+      }
+      .card.lunar {
+        background:
+          radial-gradient(ellipse 75% 60% at 50% 40%, #4a287099 0%, transparent 64%),
+          radial-gradient(ellipse 45% 32% at 22% 78%, #c9a22718 0%, transparent 70%),
+          var(--bg);
+      }
+      .stars {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          radial-gradient(1.5px 1.5px at 12% 18%, #f3ead655 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 28% 72%, #c9a22766 50%, transparent 51%),
+          radial-gradient(2px 2px at 67% 24%, #f3ead644 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 81% 64%, #c9a22755 50%, transparent 51%),
+          radial-gradient(2px 2px at 46% 40%, #f3ead633 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 91% 12%, #8b5cbf55 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 8% 88%, #c9a22744 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 54% 86%, #f3ead640 50%, transparent 51%),
+          radial-gradient(1.5px 1.5px at 73% 48%, #e0c56a44 50%, transparent 51%);
+      }
+      .frame {
+        position: absolute;
+        inset: 48px;
+        border: 1px solid #c9a22755;
+        pointer-events: none;
+      }
+      .frame::after {
+        content: "";
+        position: absolute;
+        inset: 14px;
+        border: 1px solid #c9a2272e;
+      }
+      .kicker {
+        font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
+        font-size: 22px;
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+        color: var(--gold);
+        font-weight: 500;
+        position: relative;
+      }
+      .sigil {
+        position: relative;
+        width: 420px;
+        height: 420px;
+        display: grid;
+        place-items: center;
+      }
+      .sigil svg { width: 340px; height: 340px; }
+      .card.lunar .sigil svg { width: 360px; height: 360px; }
+      .copy {
+        position: relative;
+        text-align: center;
+      }
+      h1 {
+        font-family: "Cormorant Garamond", Palatino, serif;
+        font-weight: 500;
+        font-size: 92px;
+        letter-spacing: -0.02em;
+        line-height: 0.9;
+        color: var(--ivory);
+      }
+      h1 em {
+        font-style: italic;
+        color: var(--gold-soft);
+      }
+      .rule {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin: 22px 0 18px;
+      }
+      .rule span {
+        height: 1px;
+        width: 72px;
+        background: #c9a22759;
+      }
+      .rule svg { width: 22px; height: 22px; fill: var(--gold); }
+      .sub {
+        font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
+        font-size: 22px;
+        letter-spacing: 0.38em;
+        text-transform: uppercase;
+        color: #c9a227cc;
+        font-weight: 500;
+      }
+      .amount {
+        margin-top: 28px;
+        font-family: "Cormorant Garamond", Palatino, serif;
+        font-size: 64px;
+        color: var(--gold);
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </head>
+  <body>
+    <article class="card" id="card">
+      <div class="stars"></div>
+      <div class="frame"></div>
+      <p class="kicker">Monarch of the Moon</p>
+      <div class="sigil" id="sigil"></div>
+      <div class="copy">
+        <h1 id="title">Crescent</h1>
+        <div class="rule">
+          <span></span>
+          <svg viewBox="0 0 64 64"><path d="M40.2 8.4A24 24 0 1 0 55.6 40.8 20 20 0 0 1 32 12a19.6 19.6 0 0 1 8.2-3.6Z"/></svg>
+          <span></span>
+        </div>
+        <p class="sub">House patronage</p>
+        <p class="amount" id="amount">$100</p>
+      </div>
+    </article>
+    <script>
+      const crescent = `
+        <svg viewBox="0 0 64 64" fill="#c9a227" aria-hidden="true">
+          <path d="M40.2 8.4A24 24 0 1 0 55.6 40.8 20 20 0 0 1 32 12a19.6 19.6 0 0 1 8.2-3.6Z"/>
+        </svg>`;
+      const lunar = `
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <radialGradient id="glow" cx="38%" cy="32%">
+              <stop offset="0%" stop-color="#f3ead6"/>
+              <stop offset="42%" stop-color="#e0c56a"/>
+              <stop offset="100%" stop-color="#c9a227"/>
+            </radialGradient>
+          </defs>
+          <circle cx="32" cy="32" r="23.2" fill="none" stroke="#c9a227" stroke-width="0.7" opacity="0.55"/>
+          <circle cx="32" cy="32" r="20.4" fill="url(#glow)"/>
+          <g transform="translate(10.5 9.5) scale(0.68)">
+            <path fill="#08060b" d="M40.2 8.4A24 24 0 1 0 55.6 40.8 20 20 0 0 1 32 12a19.6 19.6 0 0 1 8.2-3.6Z"/>
+          </g>
+        </svg>`;
+      const params = new URLSearchParams(location.search);
+      const kind = params.get("kind") || "crescent";
+      const card = document.getElementById("card");
+      if (kind === "lunar") {
+        card.classList.add("lunar");
+        document.getElementById("title").innerHTML = "Lunar";
+        document.getElementById("amount").textContent = "$200";
+        document.getElementById("sigil").innerHTML = lunar;
+      } else {
+        document.getElementById("title").innerHTML = "Crescent";
+        document.getElementById("amount").textContent = "$100";
+        document.getElementById("sigil").innerHTML = crescent;
+      }
+    </script>
+  </body>
+</html>
