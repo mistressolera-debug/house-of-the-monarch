@@ -107,16 +107,14 @@
     .gold-glow { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.35); }
     .purple-glow { box-shadow: 0 0 35px -5px rgba(124, 45, 18, 0.45); }
     
-    .blur-inspection {
-      filter: blur(14px);
-      transition: filter 0.3s ease-in-out;
-    }
-    .blur-inspection.unblurred {
-      filter: blur(0px);
-    }
   </style>
 </head>
 <body class="min-h-screen text-slate-200 flex flex-col antialiased selection:bg-gold-500 selection:text-slate-950">
+  <!-- Go.cam hosted age verification (Automatic mode). Docs: https://go.cam/devDoc/hostedImplementation
+       TODO(owner): replace ACCOUNT_ID and SITE_KEY with values from your Go.cam dashboard after the
+       houseofthemonarch.com domain is validated. Use the PRODUCTION key on this domain.
+       The site key is public by design (domain-bound); no secret belongs here. -->
+  <script type="application/javascript" src="https://avs-v2.dev.cam/static/js/app/avsHosted.js?p=ACCOUNT_ID&key=SITE_KEY&language=en&autoStart=1"></script>
 
   <!-- TOP ROYAL BANNER HEADER DISPLAY -->
   <div class="w-full bg-slate-950 border-b border-gold-500/30 overflow-hidden shadow-2xl relative">
@@ -247,9 +245,6 @@
         <button onclick="switchMainTab('audience')" id="nav-audience" class="nav-tab-btn px-4 py-2 rounded-full text-xs font-semibold tracking-wider text-slate-400 hover:text-gold-300 transition-all">
           AUDIENCE DESK
         </button>
-        <button onclick="switchMainTab('admin')" id="nav-admin" class="nav-tab-btn px-4 py-2 rounded-full text-xs font-semibold tracking-wider text-slate-400 hover:text-gold-300 transition-all">
-          SOVEREIGN ADMIN
-        </button>
       </nav>
 
       <!-- Sovereign Profile & VIP Gate Buttons -->
@@ -257,10 +252,6 @@
         <button onclick="openVIPModal()" class="px-3.5 py-1.5 rounded-full bg-gold-500 hover:bg-gold-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md">
           <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
           <span>VIP Sign-In</span>
-        </button>
-        <button onclick="switchMainTab('admin')" class="px-3 py-1.5 rounded-full border border-gold-500/40 bg-royal-950/80 hover:border-gold-400 text-gold-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md">
-          <i data-lucide="crown" class="w-3.5 h-3.5 text-gold-400"></i>
-          <span class="hidden sm:inline">Mistress Solena</span>
         </button>
       </div>
 
@@ -406,7 +397,7 @@
               <h3 class="font-cinzel text-xl font-bold text-purple-300">OnlyFans Sovereign Feed</h3>
               <p class="text-xs text-slate-400 mt-1">Exclusive media dispatches, high-sovereignty posts, and patron perks.</p>
             </div>
-            <a href="#" target="_blank" class="w-full py-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-slate-950 font-bold text-sm text-center flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg">
+            <!-- TODO(owner): real OnlyFans profile URL needed --><a href="#TODO-ONLYFANS-URL" target="_blank" rel="noopener" class="w-full py-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-slate-950 font-bold text-sm text-center flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg">
               Visit OnlyFans Feed <i data-lucide="external-link" class="w-4 h-4"></i>
             </a>
           </div>
@@ -426,7 +417,7 @@
               <p class="text-[11px] text-slate-400">@MistressSolerna</p>
             </div>
           </div>
-          <a href="https://fansly.com/MistressSolerna/posts" target="_blank" class="w-full py-2 rounded-full border border-sky-500/40 text-sky-300 text-xs font-semibold text-center hover:bg-sky-500/10 transition-colors">
+          <!-- TODO(owner): confirm Fansly handle; currently "MistressSolerna" (possible typo of mistresssolena) --><a href="https://fansly.com/MistressSolerna/posts" target="_blank" class="w-full py-2 rounded-full border border-sky-500/40 text-sky-300 text-xs font-semibold text-center hover:bg-sky-500/10 transition-colors">
             View Fansly
           </a>
         </div>
@@ -468,7 +459,7 @@
               <p class="text-[11px] text-slate-400">Custom Clips Store</p>
             </div>
           </div>
-          <a href="#" target="_blank" class="w-full py-2 rounded-full border border-purple-500/40 text-purple-300 text-xs font-semibold text-center hover:bg-purple-500/10 transition-colors">
+          <!-- TODO(owner): real Clips4Sale store URL needed --><a href="#TODO-CLIPS4SALE-URL" target="_blank" rel="noopener" class="w-full py-2 rounded-full border border-purple-500/40 text-purple-300 text-xs font-semibold text-center hover:bg-purple-500/10 transition-colors">
             View Clips4Sale
           </a>
         </div>
@@ -520,85 +511,15 @@
             <label class="block text-xs font-semibold text-slate-300 mb-1">Patron Alias / Handle</label>
             <input type="text" required placeholder="e.g. SovereignPatron7" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-300 mb-1">18+ Photo ID Verification</label>
-            <input type="file" required class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-gold-500/20 file:text-gold-300 hover:file:bg-gold-500/30 cursor-pointer">
-          </div>
-          <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg">
+            <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg">
             Submit Clearance Request
           </button>
         </form>
       </div>
     </section>
 
-    <!-- SECTION: SOVEREIGN ADMIN DESK -->
-    <section id="section-admin" class="tab-section hidden space-y-8">
-      <div class="p-6 rounded-2xl border border-gold-500/40 bg-slate-900/90 space-y-6 shadow-2xl">
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
-          <div>
-            <h3 class="font-cinzel text-xl font-bold text-gold-300">Sovereign Admin Verification Desk</h3>
-            <p class="text-xs text-slate-400">Inspect applicant clearance, toggle privacy blur, and grant court keys.</p>
-          </div>
-          <span class="px-3 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-300 text-xs font-semibold">
-            Mistress Solena (Active Admin)
-          </span>
-        </div>
-
-        <!-- Applicant Inspection Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="text-[11px] text-slate-400 uppercase bg-slate-950/80 border-b border-slate-800">
-              <tr>
-                <th class="p-3">Applicant</th>
-                <th class="p-3">Status</th>
-                <th class="p-3">Submitted ID</th>
-                <th class="p-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800">
-              <tr>
-                <td class="p-3 font-semibold text-slate-200">Patron_Lord_Vane</td>
-                <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">Pending Verification</span></td>
-                <td class="p-3">
-                  <button onclick="openIDInspector('https://placehold.co/600x400/1e1b4b/f59e0b?text=Government+ID+Verification')" class="px-3 py-1 rounded-full border border-gold-500/40 text-gold-300 hover:bg-gold-500/10 text-[11px]">
-                    Inspect ID Photo
-                  </button>
-                </td>
-                <td class="p-3 text-right">
-                  <button onclick="alert('Key Granted to Patron_Lord_Vane')" class="px-3 py-1 rounded-full bg-gold-500 text-slate-950 font-bold hover:bg-gold-400 text-[11px]">
-                    Grant Key
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
 
   </main>
-
-  <!-- ID INSPECTION MODAL WITH UNBLUR TOGGLE -->
-  <div id="id-inspector-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="max-w-xl w-full bg-slate-900 border border-gold-500/40 rounded-2xl p-6 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h4 class="font-cinzel font-bold text-gold-300 text-sm">Applicant Photo ID Inspector</h4>
-        <button onclick="closeIDInspector()" class="text-slate-400 hover:text-slate-200 text-sm">✕ Close</button>
-      </div>
-      
-      <!-- ID Image Container -->
-      <div class="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950 flex items-center justify-center min-h-[260px]">
-        <img id="inspector-id-img" src="" alt="Submitted Government ID" class="blur-inspection max-h-[350px] w-auto object-contain">
-      </div>
-
-      <div class="flex items-center justify-between gap-4 pt-2">
-        <p class="text-[11px] text-slate-400">Photo starts blurred for over-the-shoulder privacy.</p>
-        <button onclick="toggleIDUnblur()" class="px-4 py-2 rounded-full border border-gold-500/50 bg-gold-500/10 text-gold-300 font-semibold text-xs hover:bg-gold-500/20 transition-all flex items-center gap-2">
-          <i data-lucide="eye" class="w-4 h-4"></i> Toggle Unblur
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- PATRON VIP ACCESS / SIGN-IN MODAL -->
   <div id="vip-gate-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -640,10 +561,6 @@
         <div>
           <label class="block text-xs text-slate-300 font-semibold mb-1">Requested Patron Handle</label>
           <input type="text" required placeholder="e.g. SovereignPatron7" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-300 font-semibold mb-1">18+ Photo ID Verification</label>
-          <input type="file" required class="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-gold-500/20 file:text-gold-300 hover:file:bg-gold-500/30 cursor-pointer">
         </div>
         <button type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg">
           Submit Clearance Application
@@ -713,24 +630,6 @@
         if (bannerImg) bannerImg.src = savedData;
       }
     });
-
-    // ID Unblur Modal Logic
-    function openIDInspector(imgUrl) {
-      const modal = document.getElementById('id-inspector-modal');
-      const img = document.getElementById('inspector-id-img');
-      img.src = imgUrl;
-      img.classList.remove('unblurred'); // Always start blurred
-      modal.classList.remove('hidden');
-    }
-
-    function closeIDInspector() {
-      document.getElementById('id-inspector-modal').classList.add('hidden');
-    }
-
-    function toggleIDUnblur() {
-      const img = document.getElementById('inspector-id-img');
-      img.classList.toggle('unblurred');
-    }
 
     // VIP Gate Modal Logic
     function openVIPModal() {
