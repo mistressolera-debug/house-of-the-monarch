@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monarch of the Moon</title>
+  <meta name="description" content="Mistress Solena. The Monarch of the Moon. One house. One door." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #08060b;
+      --surface: #120e18;
+      --surface-2: #1c1624;
+      --ivory: #f3ead6;
+      --muted: #b7a894;
+      --subtle: #7c7166;
+      --gold: #c9a227;
+      --gold-soft: #e0c56a;
+      --gold-dim: #8a7019;
+      --purple: #6b3fa0;
+      --purple-deep: #3a1f5c;
+      --line: #3a3120;
+      --danger: #c45c5c;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ivory);
+      font-family: Outfit, system-ui, sans-serif;
+      font-weight: 300;
+      line-height: 1.5;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: inherit; }
+    button, .btn { font-family: inherit; cursor: pointer; }
+    .nav {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 14px 22px;
+      background: rgba(8, 6, 11, 0.88);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+    .word { font-family: "Cormorant Garamond", serif; letter-spacing: 0.14em; text-transform: uppercase; font-size: 15px; text-decoration: none; }
+    .nav-links { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .nav-links a:hover { color: var(--gold); }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 72px 22px; }
+    .kicker { color: var(--gold); letter-
