@@ -1,53 +1,731 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark h-full bg-slate-950 text-slate-100">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Monarch of the Moon</title>
-  <meta name="description" content="Mistress Solena. The Monarch of the Moon. One house. One door." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>House of the Monarch | VIP Sovereign Portal</title>
+  
+  <!-- Tailwind CSS & Lucide Icons -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            royal: {
+              950: '#090314',
+              900: '#140828',
+              800: '#260e48',
+              700: '#3d166e',
+              500: '#7c2d12',
+            },
+            gold: {
+              100: '#fef3c7',
+              200: '#fde68a',
+              300: '#fcd34d',
+              400: '#fbbf24',
+              500: '#f59e0b',
+              600: '#d97706',
+              700: '#b45309',
+            }
+          },
+          fontFamily: {
+            cinzel: ['Cinzel', 'serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+    // Global Error Handler for Primary Banner Fallback Chain
+    function handlePrimaryBannerError(img) {
+      console.warn("Primary banner file not found. Executing secondary fallback chain...");
+      const fallbacks = [
+        'image_c41ebe.jpg',
+        'house of the monarch banner 1 of 3_2.jpeg',
+        'house of the monarch banner 1 of 3.jpeg',
+        'PSX_20261012_155202.jpg',
+        'PSX_20261012_154620.jpg'
+      ];
+      
+      let attemptIndex = parseInt(img.dataset.attempt || "0");
+      attemptIndex++;
+      img.dataset.attempt = attemptIndex;
+
+      if (attemptIndex < fallbacks.length) {
+        img.src = fallbacks[attemptIndex];
+      } else {
+        console.warn("All image files unreadable in current environment. Revealing 3-panel vector banner.");
+        img.style.display = 'none';
+        const vectorFallback = document.getElementById('vector-banner-fallback');
+        if (vectorFallback) vectorFallback.classList.remove('hidden');
+      }
+    }
+
+    function handleQuoteBannerError(img) {
+      img.onerror = function() {
+        img.style.display = 'none';
+        const fallback = document.getElementById('quote-banner-fallback');
+        if (fallback) fallback.classList.remove('hidden');
+      };
+      img.src = '1776894008682.png';
+    }
+
+    function handleShopBannerError(img) {
+      img.onerror = function() {
+        img.style.display = 'none';
+        const fallback = document.getElementById('shop-banner-fallback');
+        if (fallback) fallback.classList.remove('hidden');
+      };
+      img.src = '1777105275250.png';
+    }
+
+    function handleOFBannerError(img) {
+      img.onerror = function() {
+        img.style.display = 'none';
+        const fallback = document.getElementById('of-banner-fallback');
+        if (fallback) fallback.classList.remove('hidden');
+      };
+      img.src = 'Picsart_26-04-22_18-53-51-430.jpg';
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <style>
-    :root {
-      --bg: #08060b;
-      --surface: #120e18;
-      --surface-2: #1c1624;
-      --ivory: #f3ead6;
-      --muted: #b7a894;
-      --subtle: #7c7166;
-      --gold: #c9a227;
-      --gold-soft: #e0c56a;
-      --gold-dim: #8a7019;
-      --purple: #6b3fa0;
-      --purple-deep: #3a1f5c;
-      --line: #3a3120;
-      --danger: #c45c5c;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
     body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--ivory);
-      font-family: Outfit, system-ui, sans-serif;
-      font-weight: 300;
-      line-height: 1.5;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at 50% 0%, #20083b 0%, #090314 65%, #030108 100%);
+      background-attachment: fixed;
     }
-    img { max-width: 100%; display: block; }
-    a { color: inherit; }
-    button, .btn { font-family: inherit; cursor: pointer; }
-    .nav {
-      position: sticky; top: 0; z-index: 20;
-      display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      padding: 14px 22px;
-      background: rgba(8, 6, 11, 0.88);
-      border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(10px);
+    .font-cinzel { font-family: 'Cinzel', serif; }
+    
+    .gold-glow { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.35); }
+    .purple-glow { box-shadow: 0 0 35px -5px rgba(124, 45, 18, 0.45); }
+    
+  </style>
+</head>
+<body class="min-h-screen text-slate-200 flex flex-col antialiased selection:bg-gold-500 selection:text-slate-950">
+
+  <!-- TOP ROYAL BANNER HEADER DISPLAY -->
+  <div class="w-full bg-slate-950 border-b border-gold-500/30 overflow-hidden shadow-2xl relative">
+    <div class="max-w-7xl mx-auto relative group">
+      
+      <!-- Primary Widescreen Banner Image (3:1 Aspect Ratio) -->
+      <img id="primary-royal-banner" 
+           src="image_c41ebe.jpg" 
+           data-attempt="0"
+           alt="House of the Monarch - Mistress Solena The Veiled Keeper" 
+           onerror="handlePrimaryBannerError(this)"
+           class="w-full h-auto max-h-[300px] object-cover object-center mx-auto transition-transform duration-700 group-hover:scale-[1.01]">
+      
+      <!-- Vector Fallback Banner (100% Matching 3-Panel Ornate Solena Key Layout) -->
+      <div id="vector-banner-fallback" class="hidden w-full min-h-[220px] bg-gradient-to-r from-[#120424] via-[#240a3d] to-[#120424] border-b border-gold-500/40 flex items-center justify-between p-2 md:p-4 relative overflow-hidden">
+        
+        <!-- Ambient Velvet Glow -->
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/40 via-gold-500/10 to-transparent"></div>
+
+        <!-- Left Ornate Scrollwork Panel -->
+        <div class="hidden sm:flex shrink-0 w-1/5 h-full items-center justify-center opacity-80 border-r border-gold-500/20 pr-2">
+          <svg class="w-full max-w-[160px] h-auto text-gold-400" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M 10,10 C 30,10 50,30 50,50 C 50,70 30,90 10,90" />
+            <path d="M 20,20 C 40,20 60,35 60,50 C 60,65 40,80 20,80" />
+            <circle cx="50" cy="50" r="8" fill="currentColor" fill-opacity="0.2" />
+            <path d="M 5,5 L 25,5 L 5,25 Z" fill="currentColor" />
+            <path d="M 5,95 L 25,95 L 5,75 Z" fill="currentColor" />
+          </svg>
+        </div>
+
+        <!-- Center Widescreen Solena Key Emblem -->
+        <div class="relative z-10 flex flex-col items-center justify-center max-w-xl w-full mx-auto text-center px-2">
+          <svg class="w-full max-w-[500px] h-auto drop-shadow-[0_0_22px_rgba(245,158,11,0.6)]" viewBox="0 0 800 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fef3c7" />
+                <stop offset="35%" stop-color="#fcd34d" />
+                <stop offset="70%" stop-color="#f59e0b" />
+                <stop offset="100%" stop-color="#b45309" />
+              </linearGradient>
+              <linearGradient id="purpleJewel" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#e9d5ff" />
+                <stop offset="50%" stop-color="#c084fc" />
+                <stop offset="100%" stop-color="#6b21a8" />
+              </linearGradient>
+            </defs>
+
+            <!-- Crescent Moon with Keyhole Cross -->
+            <path d="M 170 30 A 75 75 0 1 0 170 180 A 62 62 0 1 1 170 30 Z" fill="url(#goldGradient)" />
+            <circle cx="120" cy="105" r="14" fill="#090314" />
+            <polygon points="112,105 128,105 132,132 108,132" fill="#090314" />
+            <path d="M 120 93 L 120 117 M 108 105 L 132 105" stroke="url(#goldGradient)" stroke-width="3" stroke-linecap="round" />
+
+            <!-- SOLENA Key Shaft -->
+            <path d="M 185 100 L 620 100 Q 630 105 620 110 L 185 110 Z" fill="url(#goldGradient)" />
+
+            <!-- Key Bit / Crown with Jewels -->
+            <path d="M 540 110 L 540 160 L 565 160 L 565 142 L 595 142 L 595 110 Z" fill="url(#goldGradient)" />
+            <polygon points="567,118 577,133 557,133" fill="url(#purpleJewel)" />
+            <polygon points="548,138 558,153 538,153" fill="url(#purpleJewel)" />
+
+            <!-- Key Handle Filigree Swirls -->
+            <path d="M 220 98 C 240 60 300 60 320 98 Q 270 80 220 98 Z" fill="url(#goldGradient)" />
+            <path d="M 320 112 C 340 150 400 150 420 112 Q 370 130 320 112 Z" fill="url(#goldGradient)" />
+
+            <!-- SOLENA Text Along Key -->
+            <text x="235" y="90" font-family="'Cinzel', serif" font-weight="900" font-size="52" fill="url(#goldGradient)" letter-spacing="4">SOLENA</text>
+          </svg>
+
+          <h1 class="font-cinzel text-xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gold-300 via-amber-200 to-gold-500 tracking-[0.25em] uppercase mt-1">
+            MISTRESS SOLENA
+          </h1>
+          <p class="font-cinzel text-xs md:text-sm text-gold-400/90 tracking-[0.35em] uppercase mt-1">
+            — THE VEILED KEEPER —
+          </p>
+        </div>
+
+        <!-- Right Ornate Scrollwork Panel -->
+        <div class="hidden sm:flex shrink-0 w-1/5 h-full items-center justify-center opacity-80 border-l border-gold-500/20 pl-2">
+          <svg class="w-full max-w-[160px] h-auto text-gold-400 transform scale-x-[-1]" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M 10,10 C 30,10 50,30 50,50 C 50,70 30,90 10,90" />
+            <path d="M 20,20 C 40,20 60,35 60,50 C 60,65 40,80 20,80" />
+            <circle cx="50" cy="50" r="8" fill="currentColor" fill-opacity="0.2" />
+            <path d="M 5,5 L 25,5 L 5,25 Z" fill="currentColor" />
+            <path d="M 5,95 L 25,95 L 5,75 Z" fill="currentColor" />
+          </svg>
+        </div>
+
+        <!-- Quick Upload Button for Custom Local Banner -->
+        <div class="absolute bottom-3 right-3 z-20">
+          <label for="banner-upload-input" class="cursor-pointer px-3.5 py-1.5 rounded-full bg-slate-950/80 border border-gold-500/50 text-gold-300 text-xs font-semibold backdrop-blur-md hover:bg-gold-500 hover:text-slate-950 transition-all flex items-center gap-1.5 shadow-lg">
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i> Pick Banner File
+          </label>
+          <input type="file" id="banner-upload-input" accept="image/*" class="hidden" onchange="handleDirectBannerUpload(event)">
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STICKY NAVIGATION HEADER -->
+  <header class="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-xl border-b border-slate-800/80 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchMainTab('court')">
+        <div class="w-10 h-10 rounded-full border border-gold-500/40 bg-royal-900 flex items-center justify-center text-gold-400 font-cinzel font-bold text-lg shadow-inner">
+          M
+        </div>
+        <div>
+          <h2 class="font-cinzel text-base md:text-lg font-bold text-gold-300 tracking-[0.15em] uppercase">HOUSE OF THE MONARCH</h2>
+          <p class="text-[10px] text-slate-400 tracking-wider">PRIVATE VIP AUDIENCE PORTAL</p>
+        </div>
+      </div>
+
+      <!-- Centered Navigation Tabs -->
+      <nav class="flex flex-wrap items-center gap-1 sm:gap-2 bg-slate-900/80 p-1.5 rounded-full border border-slate-800 shadow-inner">
+        <button onclick="switchMainTab('court')" id="nav-court" class="nav-tab-btn px-4 py-2 rounded-full text-xs font-semibold tracking-wider transition-all bg-gold-500 text-slate-950 shadow-md">
+          THE COURT
+        </button>
+        <button onclick="switchMainTab('directory')" id="nav-directory" class="nav-tab-btn px-4 py-2 rounded-full text-xs font-semibold tracking-wider text-slate-400 hover:text-gold-300 transition-all">
+          THE DIRECTORY
+        </button>
+        <button onclick="switchMainTab('vault')" id="nav-vault" class="nav-tab-btn px-4 py-2 rounded-full text-xs font-semibold tracking-wider text-slate-400 hover:text-gold-300 transition-all">
+          THE VAULT
+        </button>
+        <button onclick="switchMainTab('audience')" id="nav-audience" class="nav-tab-btn px-4 py-2 rounded-full text-xs font-semibold tracking-wider text-slate-400 hover:text-gold-300 transition-all">
+          AUDIENCE DESK
+        </button>
+      </nav>
+
+      <!-- Sovereign Profile & VIP Gate Buttons -->
+      <div class="flex items-center gap-2">
+        <button onclick="openVIPModal()" class="px-3.5 py-1.5 rounded-full bg-gold-500 hover:bg-gold-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md">
+          <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+          <span>VIP Sign-In</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN PORTAL CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-8">
+    
+    <!-- SECTION: THE COURT (LANDING PAGE) -->
+    <section id="section-court" class="tab-section space-y-8">
+      
+      <!-- Key Medallion Hero Showcase -->
+      <div class="relative rounded-3xl border border-gold-500/30 bg-slate-900/60 p-8 text-center overflow-hidden shadow-2xl">
+        <div class="absolute inset-0 bg-radial-gradient from-purple-900/30 via-transparent to-transparent"></div>
+        
+        <!-- Central Golden Skeleton Key Medallion -->
+        <div class="relative z-10 mx-auto w-32 h-32 md:w-36 md:h-36 rounded-full border-2 border-gold-400/60 bg-royal-950 flex items-center justify-center shadow-2xl gold-glow group cursor-pointer" onclick="openVIPModal()">
+          <i data-lucide="key" class="w-16 h-16 text-gold-400 group-hover:scale-110 transition-transform duration-300"></i>
+        </div>
+
+        <h2 class="font-cinzel text-2xl md:text-4xl font-bold text-gold-200 mt-6 tracking-wider">WELCOME TO THE HOUSE OF THE MONARCH</h2>
+        <p class="max-w-2xl mx-auto text-slate-400 text-sm md:text-base mt-2">
+          An exclusive private portal for audience reservations, bespoke court protocols, and high-sovereignty Vault media.
+        </p>
+
+        <div class="flex flex-wrap justify-center gap-4 mt-6">
+          <button onclick="openVIPModal()" class="px-6 py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all shadow-lg flex items-center gap-2">
+            <i data-lucide="lock" class="w-4 h-4"></i> Patron VIP Access / Sign In
+          </button>
+          <button onclick="switchMainTab('audience')" class="px-6 py-2.5 rounded-full border border-gold-500/50 text-gold-300 font-semibold text-sm hover:bg-gold-500/10 transition-all">
+            Book Retainer Audience
+          </button>
+          <button onclick="switchMainTab('directory')" class="px-6 py-2.5 rounded-full border border-slate-700 text-slate-300 font-semibold text-sm hover:bg-slate-800 transition-all flex items-center gap-2">
+            Open Sovereign Directory <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ABOUT SECTION (PROMINENT LANDING ANCHOR) -->
+      <div class="rounded-2xl border border-gold-500/30 bg-slate-900/80 p-6 md:p-8 space-y-4 shadow-xl relative overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <h3 class="font-cinzel text-xl md:text-2xl font-bold text-gold-300 flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-6 h-6 text-gold-400"></i> About Mistress Solena & Court Protocol
+          </h3>
+          <span class="px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-300 text-xs font-semibold uppercase tracking-wider">
+            Sovereign Standard
+          </span>
+        </div>
+
+        <p class="text-sm md:text-base text-slate-300 leading-relaxed">
+          The House of the Monarch represents an elevated standard of privacy, discretion, and bespoke court arrangements. Every retainer session and audience is governed by clear protocol, mutual respect, and verified station access.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/70 flex items-start gap-3">
+            <i data-lucide="user-check" class="w-5 h-5 text-gold-400 shrink-0 mt-0.5"></i>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-xs uppercase tracking-wider">18+ ID Clearance</h4>
+              <p class="text-[11px] text-slate-400 mt-1">Government photo ID verification required for active court keys and retainer clearance.</p>
+            </div>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/70 flex items-start gap-3">
+            <i data-lucide="lock" class="w-5 h-5 text-gold-400 shrink-0 mt-0.5"></i>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-xs uppercase tracking-wider">Discreet Retainers</h4>
+              <p class="text-[11px] text-slate-400 mt-1">Encrypted Netcoins cryptocurrency & private retainer clearance for sovereign patrons.</p>
+            </div>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/70 flex items-start gap-3">
+            <i data-lucide="sparkles" class="w-5 h-5 text-gold-400 shrink-0 mt-0.5"></i>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-xs uppercase tracking-wider">Sovereign Vault</h4>
+              <p class="text-[11px] text-slate-400 mt-1">Exclusive media dispatches, high-sovereignty archives, and private content for verified patrons.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- SECTION: THE DIRECTORY -->
+    <section id="section-directory" class="tab-section hidden space-y-8">
+      
+      <!-- Celestial Quote Banner -->
+      <div class="relative rounded-3xl border border-purple-500/30 overflow-hidden shadow-2xl group bg-royal-950">
+        <img id="quote-banner-img"
+             src="1776894008682_2.png" 
+             alt="You are the sun, but the moon brings the magic" 
+             onerror="handleQuoteBannerError(this)"
+             class="w-full h-auto max-h-[260px] object-cover object-center transition-transform duration-700 group-hover:scale-[1.01]">
+        
+        <div id="quote-banner-fallback" class="hidden w-full h-[200px] bg-gradient-to-r from-royal-950 via-royal-900 to-royal-950 p-6 flex flex-col justify-end">
+          <span class="px-3 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-300 text-xs font-semibold uppercase tracking-widest backdrop-blur-md w-max">Sovereign Directory</span>
+          <h2 class="font-cinzel text-xl md:text-3xl font-bold text-slate-100 mt-2">Official Platforms & Outposts</h2>
+        </div>
+      </div>
+
+      <!-- Feature Grid: Shop & OnlyFans Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Monarch of the Moon Storefront Card -->
+        <div class="rounded-2xl border border-gold-500/40 bg-slate-900/80 overflow-hidden flex flex-col justify-between shadow-xl hover:border-gold-400 transition-all group">
+          <div class="relative overflow-hidden h-48 md:h-56 bg-royal-950">
+            <img id="shop-banner-img"
+                 src="1777105275250_2.png" 
+                 alt="Monarch of the Moon Shop" 
+                 onerror="handleShopBannerError(this)"
+                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            
+            <div id="shop-banner-fallback" class="hidden w-full h-full bg-gradient-to-br from-royal-900 to-slate-950 p-6 flex flex-col justify-center items-center text-center">
+              <i data-lucide="shopping-bag" class="w-10 h-10 text-gold-400 mb-2"></i>
+              <h4 class="font-cinzel text-xl font-bold text-gold-300">Monarch of the Moon Shop</h4>
+            </div>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <h3 class="font-cinzel text-xl font-bold text-gold-300">Monarch of the Moon Storefront</h3>
+              <p class="text-xs text-slate-400 mt-1">Explore our official apparel, esoteric artifacts, and custom print offerings online.</p>
+            </div>
+            <a href="https://monarchofthemoon.shop" target="_blank" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm text-center flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg">
+              Visit monarchofthemoon.shop <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- OnlyFans Card -->
+        <div class="rounded-2xl border border-purple-500/40 bg-slate-900/80 overflow-hidden flex flex-col justify-between shadow-xl hover:border-purple-400 transition-all group">
+          <div class="relative overflow-hidden h-48 md:h-56 bg-royal-950">
+            <img id="of-banner-img"
+                 src="Picsart_26-04-22_18-53-51-430_2.jpg" 
+                 alt="OnlyFans - The Moon Brings The Magic" 
+                 onerror="handleOFBannerError(this)"
+                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            
+            <div id="of-banner-fallback" class="hidden w-full h-full bg-gradient-to-br from-purple-950 to-slate-950 p-6 flex flex-col justify-center items-center text-center">
+              <i data-lucide="star" class="w-10 h-10 text-purple-400 mb-2"></i>
+              <h4 class="font-cinzel text-xl font-bold text-purple-300">OnlyFans Vault</h4>
+            </div>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <h3 class="font-cinzel text-xl font-bold text-purple-300">OnlyFans Sovereign Feed</h3>
+              <p class="text-xs text-slate-400 mt-1">Exclusive media dispatches, high-sovereignty posts, and patron perks.</p>
+            </div>
+            <a href="https://onlyfans.com/mistress.solena" target="_blank" rel="noopener" class="w-full py-3 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-slate-950 font-bold text-sm text-center flex items-center justify-center gap-2 hover:brightness-110 transition-all shadow-lg">
+              Visit OnlyFans Feed <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Additional Platforms Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Fansly Card -->
+        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 hover:border-sky-500/50 transition-all flex flex-col justify-between space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold">F</div>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-sm">Fansly</h4>
+              <p class="text-[11px] text-slate-400">@MistressSolerna</p>
+            </div>
+          </div>
+          <a href="https://fansly.com/MistressSolerna/posts" target="_blank" class="w-full py-2 rounded-full border border-sky-500/40 text-sky-300 text-xs font-semibold text-center hover:bg-sky-500/10 transition-colors">
+            View Fansly
+          </a>
+        </div>
+
+        <!-- xHamster Card -->
+        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 hover:border-amber-500/50 transition-all flex flex-col justify-between space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold">X</div>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-sm">xHamster</h4>
+              <p class="text-[11px] text-slate-400">@missolena</p>
+            </div>
+          </div>
+          <a href="https://xhamster.com/users/missolena" target="_blank" class="w-full py-2 rounded-full border border-amber-500/40 text-amber-300 text-xs font-semibold text-center hover:bg-amber-500/10 transition-colors">
+            View xHamster
+          </a>
+        </div>
+
+        <!-- FapHouse Card -->
+        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 hover:border-rose-500/50 transition-all flex flex-col justify-between space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 font-bold">FH</div>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-sm">FapHouse</h4>
+              <p class="text-[11px] text-slate-400">@mistresssolena</p>
+            </div>
+          </div>
+          <a href="https://faphouse.com/models/mistresssolena" target="_blank" class="w-full py-2 rounded-full border border-rose-500/40 text-rose-300 text-xs font-semibold text-center hover:bg-rose-500/10 transition-colors">
+            View FapHouse
+          </a>
+        </div>
+
+        <!-- Clips4Sale Card -->
+        <div class="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 hover:border-purple-500/50 transition-all flex flex-col justify-between space-y-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">C4S</div>
+            <div>
+              <h4 class="font-semibold text-slate-200 text-sm">Clips4Sale</h4>
+              <p class="text-[11px] text-slate-400">Custom Clips Store</p>
+            </div>
+          </div>
+          <a href="https://www.clips4sale.com/studio/486237/the-monarch-of-the-moons-shop" target="_blank" rel="noopener" class="w-full py-2 rounded-full border border-purple-500/40 text-purple-300 text-xs font-semibold text-center hover:bg-purple-500/10 transition-colors">
+            View Clips4Sale
+          </a>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- SECTION: THE VAULT -->
+    <section id="section-vault" class="tab-section hidden space-y-8">
+      <div class="p-6 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+        <h3 class="font-cinzel text-xl font-bold text-gold-300">The Sovereign Vault</h3>
+        <p class="text-xs text-slate-400">High-sovereignty private media archives and exclusive patron dispatches.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/80 space-y-3">
+            <div class="h-36 rounded-lg bg-royal-900 border border-gold-500/20 flex items-center justify-center">
+              <i data-lucide="lock" class="w-8 h-8 text-gold-400"></i>
+            </div>
+            <h4 class="font-semibold text-sm text-slate-200">Court Dispatch #04</h4>
+            <p class="text-[11px] text-slate-400">Verified Key Required</p>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/80 space-y-3">
+            <div class="h-36 rounded-lg bg-royal-900 border border-gold-500/20 flex items-center justify-center">
+              <i data-lucide="lock" class="w-8 h-8 text-gold-400"></i>
+            </div>
+            <h4 class="font-semibold text-sm text-slate-200">Private Retainer Notes</h4>
+            <p class="text-[11px] text-slate-400">Verified Key Required</p>
+          </div>
+          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/80 space-y-3">
+            <div class="h-36 rounded-lg bg-royal-900 border border-gold-500/20 flex items-center justify-center">
+              <i data-lucide="lock" class="w-8 h-8 text-gold-400"></i>
+            </div>
+            <h4 class="font-semibold text-sm text-slate-200">High Protocol Archive</h4>
+            <p class="text-[11px] text-slate-400">Verified Key Required</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: AUDIENCE DESK -->
+    <section id="section-audience" class="tab-section hidden space-y-8">
+      <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
+        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center">Retainer Audience Application</h3>
+        <p class="text-xs text-slate-400 text-center">Complete 18+ verification so your application can be reviewed privately.</p>
+
+        <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-[11px] text-slate-300 space-y-2 leading-relaxed">
+          <p class="font-semibold text-amber-200 uppercase tracking-wider text-[10px]">Consent &amp; privacy notice</p>
+          <p>We collect your chosen handle, name, email, a photo of your government ID, and a selfie. These are used only to verify you are 18+ before granting retainer access.</p>
+          <p>Files are encrypted and stored privately for review by the site operator. After you are approved or rejected, ID and selfie images are deleted immediately. Pending applications that are not reviewed are deleted after 30 days. We keep only your handle, status (approved/rejected/expired), and dates.</p>
+          <p>Questions: <span class="text-gold-300">mistresssolena@monarchofthemoon.shop</span></p>
+        </div>
+
+        <form id="hotm-apply-form" class="space-y-4" enctype="multipart/form-data">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Patron Alias / Handle</label>
+            <input name="handle" type="text" required maxlength="64" placeholder="e.g. SovereignPatron7" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Legal name (as on ID)</label>
+            <input name="name" type="text" required maxlength="96" placeholder="Full name" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Email</label>
+            <input name="email" type="email" required maxlength="128" placeholder="you@example.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Government photo ID (JPEG/PNG/WebP, max 8&nbsp;MB)</label>
+            <input name="id_image" type="file" required accept="image/jpeg,image/png,image/webp,image/heic" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-gold-500/20 file:text-gold-300">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Selfie holding your ID (JPEG/PNG/WebP, max 8&nbsp;MB)</label>
+            <input name="selfie" type="file" required accept="image/jpeg,image/png,image/webp,image/heic" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-gold-500/20 file:text-gold-300">
+          </div>
+          <label class="flex items-start gap-2 text-[11px] text-slate-300">
+            <input name="consent" type="checkbox" required value="yes" class="mt-0.5">
+            <span>I am 18 or older and I consent to this ID check as described above.</span>
+          </label>
+          <button type="submit" id="hotm-apply-submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all">
+            Submit Clearance Request
+          </button>
+          <p id="hotm-apply-status" class="text-xs text-center text-slate-400" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+
+
+  </main>
+
+  <!-- PATRON VIP ACCESS / SIGN-IN MODAL -->
+  <div id="vip-gate-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-slate-900 border border-gold-500/40 rounded-3xl p-6 space-y-5 shadow-2xl relative">
+      <button onclick="closeVIPModal()" class="absolute top-4 right-4 text-slate-400 hover:text-gold-300 text-sm p-1">✕</button>
+      
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 rounded-full border border-gold-500/40 bg-royal-950 mx-auto flex items-center justify-center text-gold-400 mb-2 shadow-inner">
+          <i data-lucide="key" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-cinzel text-xl font-bold text-gold-300">Sovereign Patron Gate</h3>
+        <p class="text-xs text-slate-400">Enter your verified court key or apply for 18+ clearance.</p>
+      </div>
+
+      <!-- VIP Tabs -->
+      <div class="flex rounded-full bg-slate-950 p-1 border border-slate-800 text-xs font-semibold">
+        <button onclick="switchVIPTab('login')" id="vip-tab-login" class="flex-1 py-1.5 rounded-full bg-gold-500 text-slate-950">Sign In</button>
+        <button onclick="switchVIPTab('apply')" id="vip-tab-apply" class="flex-1 py-1.5 rounded-full text-slate-400 hover:text-gold-300">Apply for Key</button>
+        <button onclick="switchVIPTab('recover')" id="vip-tab-recover" class="flex-1 py-1.5 rounded-full text-slate-400 hover:text-gold-300">Recover</button>
+      </div>
+
+      <!-- Tab Content: Login -->
+      <form id="vip-form-login" onsubmit="event.preventDefault(); handleVIPLogin();" class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1">Patron Handle / Alias</label>
+          <input type="text" required placeholder="e.g. Patron_Lord_Vane" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1">Court Key Passcode</label>
+          <input type="password" required placeholder="••••••••••••" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg">
+          Authenticate & Enter
+        </button>
+      </form>
+
+      <!-- Tab Content: Apply -->
+            <form id="vip-form-apply" onsubmit="event.preventDefault(); handleVIPApply();" class="hidden space-y-4">
+        <p class="text-xs text-slate-400 leading-relaxed">New patrons verify through the Audience Desk. You will upload an ID photo and selfie for private review. Images are deleted after review (or after 30 days if still pending).</p>
+        <button type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs">
+          Open Audience Desk
+        </button>
+      </form>
+
+      <!-- Tab Content: Recover -->
+      <form id="vip-form-recover" onsubmit="event.preventDefault(); handleVIPRecover();" class="hidden space-y-4">
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1">Registered Handle or Email</label>
+          <input type="text" required placeholder="Enter handle..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-full border border-gold-500/50 text-gold-300 font-bold text-xs uppercase tracking-wider hover:bg-gold-500/10">
+          Request Key Dispatch
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT ENGINE -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Tab Switcher Function
+    function switchMainTab(tabId) {
+      document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+      const activeSection = document.getElementById(`section-${tabId}`);
+      if (activeSection) activeSection.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.classList.remove('bg-gold-500', 'text-slate-950');
+        btn.classList.add('text-slate-400');
+      });
+
+      const activeBtn = document.getElementById(`nav-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-gold-500', 'text-slate-950');
+        activeBtn.classList.remove('text-slate-400');
+      }
     }
-    .word { font-family: "Cormorant Garamond", serif; letter-spacing: 0.14em; text-transform: uppercase; font-size: 15px; text-decoration: none; }
-    .nav-links { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-    .nav-links a { color: var(--muted); text-decoration: none; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
-    .nav-links a:hover { color: var(--gold); }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 72px 22px; }
-    .kicker { color: var(--gold); letter-
+
+    // Direct File Upload Handler for Custom Banner
+    function handleDirectBannerUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const bannerImg = document.getElementById('primary-royal-banner');
+          const vectorFallback = document.getElementById('vector-banner-fallback');
+          
+          bannerImg.src = e.target.result;
+          bannerImg.style.display = 'block';
+          if (vectorFallback) vectorFallback.classList.add('hidden');
+          
+          localStorage.setItem('monarch_custom_banner_data', e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    // Restore Saved Banner File
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedData = localStorage.getItem('monarch_custom_banner_data');
+      if (savedData) {
+        const bannerImg = document.getElementById('primary-royal-banner');
+        if (bannerImg) bannerImg.src = savedData;
+      }
+    });
+
+    // VIP Gate Modal Logic
+    function openVIPModal() {
+      document.getElementById('vip-gate-modal').classList.remove('hidden');
+    }
+
+    function closeVIPModal() {
+      document.getElementById('vip-gate-modal').classList.add('hidden');
+    }
+
+    function switchVIPTab(tabName) {
+      document.getElementById('vip-form-login').classList.add('hidden');
+      document.getElementById('vip-form-apply').classList.add('hidden');
+      document.getElementById('vip-form-recover').classList.add('hidden');
+
+      document.getElementById(`vip-form-${tabName}`).classList.remove('hidden');
+
+      ['login', 'apply', 'recover'].forEach(t => {
+        const btn = document.getElementById(`vip-tab-${t}`);
+        if (t === tabName) {
+          btn.classList.add('bg-gold-500', 'text-slate-950');
+          btn.classList.remove('text-slate-400');
+        } else {
+          btn.classList.remove('bg-gold-500', 'text-slate-950');
+          btn.classList.add('text-slate-400');
+        }
+      });
+    }
+
+    function handleVIPLogin() {
+      closeVIPModal();
+      switchMainTab('vault');
+    }
+
+    function handleVIPApply() {
+      closeVIPModal();
+      switchMainTab('audience');
+    }
+
+    function handleVIPRecover() {
+      closeVIPModal();
+    }
+
+    // Age-verify upload API (Cloudflare Worker). Replace after deploy:
+    // VERIFY_API points at the live hotm-verify Worker.
+    const VERIFY_API = "https://hotm-verify.mistressolera.workers.dev";
+
+    document.getElementById('hotm-apply-form')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.target;
+      const status = document.getElementById('hotm-apply-status');
+      const btn = document.getElementById('hotm-apply-submit');
+      status.textContent = 'Uploading securely…';
+      status.className = 'text-xs text-center text-slate-400';
+      btn.disabled = true;
+      try {
+        if (VERIFY_API.includes('REPLACE_ME')) {
+          throw new Error('Verification server is not connected yet. Please try again later.');
+        }
+        const fd = new FormData(form);
+        const res = await fetch(VERIFY_API + '/apply', { method: 'POST', body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || ('Upload failed (' + res.status + ')'));
+        status.textContent = 'Application received. You will be contacted after review.';
+        status.className = 'text-xs text-center text-emerald-400';
+        form.reset();
+      } catch (err) {
+        status.textContent = err.message || 'Upload failed';
+        status.className = 'text-xs text-center text-rose-400';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+  </script>
+
+</body>
+</html>
