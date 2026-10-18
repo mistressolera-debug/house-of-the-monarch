@@ -700,8 +700,8 @@
     }
 
     // Age-verify upload API (Cloudflare Worker). Replace after deploy:
-    // TODO(owner): set VERIFY_API to your workers.dev URL, e.g. https://hotm-verify.<subdomain>.workers.dev
-    const VERIFY_API = "https://hotm-verify.REPLACE_ME.workers.dev";
+    // VERIFY_API points at the live hotm-verify Worker.
+    const VERIFY_API = "https://hotm-verify.mistressolera.workers.dev";
 
     document.getElementById('hotm-apply-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
