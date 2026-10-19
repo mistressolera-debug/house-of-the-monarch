@@ -219,7 +219,14 @@
 
       <!-- Sovereign Profile & VIP Gate Buttons -->
       <div class="flex items-center gap-2">
-        <button onclick="openVIPModal()" class="px-3.5 py-1.5 rounded-full bg-gold-500 hover:bg-gold-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md">
+        <div id="vip-signed-in" class="hidden items-center gap-2">
+          <button onclick="switchMainTab('vault')" class="px-3.5 py-1.5 rounded-full border border-gold-500/50 text-gold-300 font-semibold text-xs flex items-center gap-1.5 hover:bg-gold-500/10 transition-all">
+            <i data-lucide="crown" class="w-3.5 h-3.5"></i>
+            <span id="vip-signed-in-handle"></span>
+          </button>
+          <button onclick="patronSignOut()" class="px-3 py-1.5 rounded-full border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition-all">Sign out</button>
+        </div>
+        <button id="vip-signin-btn" onclick="openVIPModal()" class="px-3.5 py-1.5 rounded-full bg-gold-500 hover:bg-gold-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-md">
           <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
           <span>VIP Sign-In</span>
         </button>
@@ -440,34 +447,23 @@
 
     <!-- SECTION: THE VAULT -->
     <section id="section-vault" class="tab-section hidden space-y-8">
-      <div class="p-6 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4">
+      <!-- Locked state (shown until a patron signs in). Vault content is served by the verify Worker only to signed-in patrons. -->
+      <div id="vault-locked" class="p-6 md:p-8 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4 text-center">
+        <div class="w-16 h-16 rounded-full border border-gold-500/40 bg-royal-950 mx-auto flex items-center justify-center text-gold-400 shadow-inner gold-glow">
+          <i data-lucide="lock" class="w-8 h-8"></i>
+        </div>
         <h3 class="font-cinzel text-xl font-bold text-gold-300">The Sovereign Vault</h3>
-        <p class="text-xs text-slate-400">High-sovereignty private media archives and exclusive patron dispatches.</p>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-4">
-          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/80 space-y-3">
-            <div class="h-36 rounded-lg bg-royal-900 border border-gold-500/20 flex items-center justify-center">
-              <i data-lucide="lock" class="w-8 h-8 text-gold-400"></i>
-            </div>
-            <h4 class="font-semibold text-sm text-slate-200">Court Dispatch #04</h4>
-            <p class="text-[11px] text-slate-400">Verified Key Required</p>
-          </div>
-          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/80 space-y-3">
-            <div class="h-36 rounded-lg bg-royal-900 border border-gold-500/20 flex items-center justify-center">
-              <i data-lucide="lock" class="w-8 h-8 text-gold-400"></i>
-            </div>
-            <h4 class="font-semibold text-sm text-slate-200">Private Retainer Notes</h4>
-            <p class="text-[11px] text-slate-400">Verified Key Required</p>
-          </div>
-          <div class="p-4 rounded-xl border border-slate-800 bg-slate-950/80 space-y-3">
-            <div class="h-36 rounded-lg bg-royal-900 border border-gold-500/20 flex items-center justify-center">
-              <i data-lucide="lock" class="w-8 h-8 text-gold-400"></i>
-            </div>
-            <h4 class="font-semibold text-sm text-slate-200">High Protocol Archive</h4>
-            <p class="text-[11px] text-slate-400">Verified Key Required</p>
-          </div>
+        <p id="vault-locked-msg" class="text-xs text-slate-400 max-w-md mx-auto">The Vault is sealed. Sign in with your verified court key to enter.</p>
+        <div class="flex flex-wrap justify-center gap-3 pt-2">
+          <button onclick="openVIPModal()" class="px-6 py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all shadow-lg flex items-center gap-2">
+            <i data-lucide="key-round" class="w-4 h-4"></i> Sign In
+          </button>
+          <button onclick="switchMainTab('audience')" class="px-6 py-2.5 rounded-full border border-gold-500/50 text-gold-300 font-semibold text-sm hover:bg-gold-500/10 transition-all">
+            Apply for a Key
+          </button>
         </div>
       </div>
+      <div id="vault-content" class="hidden"></div>
     </section>
 
     <!-- SECTION: AUDIENCE DESK -->
@@ -544,13 +540,14 @@
       <form id="vip-form-login" onsubmit="event.preventDefault(); handleVIPLogin();" class="space-y-4">
         <div>
           <label class="block text-xs text-slate-300 font-semibold mb-1">Patron Handle / Alias</label>
-          <input type="text" required placeholder="e.g. Patron_Lord_Vane" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          <input id="vip-login-handle" type="text" required maxlength="64" autocomplete="username" placeholder="e.g. Patron_Lord_Vane" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
         </div>
         <div>
           <label class="block text-xs text-slate-300 font-semibold mb-1">Court Key Passcode</label>
-          <input type="password" required placeholder="••••••••••••" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          <input id="vip-login-pass" type="password" required maxlength="64" autocomplete="current-password" placeholder="••••-••••-••••-••••-••••" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
         </div>
-        <button type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg">
+        <p id="vip-login-error" class="hidden text-xs text-rose-400 text-center" aria-live="polite"></p>
+        <button id="vip-login-submit" type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg disabled:opacity-60">
           Authenticate & Enter
         </button>
       </form>
@@ -564,15 +561,9 @@
       </form>
 
       <!-- Tab Content: Recover -->
-      <form id="vip-form-recover" onsubmit="event.preventDefault(); handleVIPRecover();" class="hidden space-y-4">
-        <div>
-          <label class="block text-xs text-slate-300 font-semibold mb-1">Registered Handle or Email</label>
-          <input type="text" required placeholder="Enter handle..." class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
-        </div>
-        <button type="submit" class="w-full py-2.5 rounded-full border border-gold-500/50 text-gold-300 font-bold text-xs uppercase tracking-wider hover:bg-gold-500/10">
-          Request Key Dispatch
-        </button>
-      </form>
+      <div id="vip-form-recover" class="hidden space-y-4">
+        <p class="text-xs text-slate-300 leading-relaxed text-center">Lost your court key? Keys are issued personally. Email <a href="mailto:mistresssolena@monarchofthemoon.shop" class="text-gold-300 underline">mistresssolena@monarchofthemoon.shop</a> from the address you applied with to request a new one.</p>
+      </div>
     </div>
   </div>
 
@@ -601,6 +592,11 @@
 
     // VIP Gate Modal Logic
     function openVIPModal() {
+      if (localStorage.getItem('hotm_patron_token') && !document.getElementById('vault-content').classList.contains('hidden')) {
+        switchMainTab('vault');
+        return;
+      }
+      vipLoginError('');
       document.getElementById('vip-gate-modal').classList.remove('hidden');
     }
 
@@ -627,9 +623,82 @@
       });
     }
 
-    function handleVIPLogin() {
-      closeVIPModal();
-      switchMainTab('vault');
+    // ---- Patron sign-in (real; checked by the verify Worker) ----
+    const PATRON_TOKEN = 'hotm_patron_token';
+    function vipLoginError(msg) {
+      const el = document.getElementById('vip-login-error');
+      el.textContent = msg || '';
+      el.classList.toggle('hidden', !msg);
+    }
+    async function handleVIPLogin() {
+      const btn = document.getElementById('vip-login-submit');
+      const handle = document.getElementById('vip-login-handle').value.trim();
+      const passcode = document.getElementById('vip-login-pass').value;
+      vipLoginError('');
+      btn.disabled = true;
+      try {
+        const res = await fetch(VERIFY_API + '/patron/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ handle, passcode })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.token) throw new Error(data.error || 'Sign-in failed. Please try again.');
+        localStorage.setItem(PATRON_TOKEN, data.token);
+        document.getElementById('vip-login-pass').value = '';
+        const ok = await loadVault();
+        if (!ok) throw new Error('Sign-in failed. Please try again.');
+        closeVIPModal();
+        switchMainTab('vault');
+      } catch (err) {
+        vipLoginError(err.message === 'Failed to fetch' ? 'Could not reach the gate. Check your connection and try again.' : err.message);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    function setVaultLocked(msg) {
+      const content = document.getElementById('vault-content');
+      content.innerHTML = '';
+      content.classList.add('hidden');
+      document.getElementById('vault-locked').classList.remove('hidden');
+      if (msg) document.getElementById('vault-locked-msg').textContent = msg;
+      document.getElementById('vip-signed-in').classList.add('hidden');
+      document.getElementById('vip-signed-in').classList.remove('flex');
+      document.getElementById('vip-signin-btn').classList.remove('hidden');
+    }
+    async function loadVault() {
+      const token = localStorage.getItem(PATRON_TOKEN);
+      if (!token) { setVaultLocked(); return false; }
+      try {
+        const res = await fetch(VERIFY_API + '/patron/vault', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (res.status === 401) {
+          localStorage.removeItem(PATRON_TOKEN);
+          setVaultLocked('Your session has ended. Sign in again to enter the Vault.');
+          return false;
+        }
+        const data = await res.json();
+        if (!res.ok || !data.html) throw new Error('vault unavailable');
+        const content = document.getElementById('vault-content');
+        content.innerHTML = data.html;
+        content.classList.remove('hidden');
+        document.getElementById('vault-locked').classList.add('hidden');
+        document.getElementById('vip-signed-in-handle').textContent = data.handle;
+        document.getElementById('vip-signed-in').classList.remove('hidden');
+        document.getElementById('vip-signed-in').classList.add('flex');
+        document.getElementById('vip-signin-btn').classList.add('hidden');
+        lucide.createIcons();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+    async function patronSignOut() {
+      const token = localStorage.getItem(PATRON_TOKEN);
+      localStorage.removeItem(PATRON_TOKEN);
+      setVaultLocked('You have signed out. Sign in with your court key to enter the Vault.');
+      switchMainTab('court');
+      if (token) {
+        try { await fetch(VERIFY_API + '/patron/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) {}
+      }
     }
 
     function handleVIPApply() {
@@ -637,13 +706,11 @@
       switchMainTab('audience');
     }
 
-    function handleVIPRecover() {
-      closeVIPModal();
-    }
 
     // Age-verify upload API (Cloudflare Worker). Replace after deploy:
     // VERIFY_API points at the live hotm-verify Worker.
     const VERIFY_API = "https://hotm-verify.mistressolera.workers.dev";
+    if (localStorage.getItem(PATRON_TOKEN)) loadVault();
 
     document.getElementById('hotm-apply-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
