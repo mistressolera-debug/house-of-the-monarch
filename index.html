@@ -38,29 +38,12 @@
         }
       }
     }
-    // Global Error Handler for Primary Banner Fallback Chain
+    // Primary banner comes from the admin-managed Worker (/banner). If none is set (404) or it fails, show the vector banner.
     function handlePrimaryBannerError(img) {
-      console.warn("Primary banner file not found. Executing secondary fallback chain...");
-      const fallbacks = [
-        'image_c41ebe.jpg',
-        'house of the monarch banner 1 of 3_2.jpeg',
-        'house of the monarch banner 1 of 3.jpeg',
-        'PSX_20261012_155202.jpg',
-        'PSX_20261012_154620.jpg'
-      ];
-      
-      let attemptIndex = parseInt(img.dataset.attempt || "0");
-      attemptIndex++;
-      img.dataset.attempt = attemptIndex;
-
-      if (attemptIndex < fallbacks.length) {
-        img.src = fallbacks[attemptIndex];
-      } else {
-        console.warn("All image files unreadable in current environment. Revealing 3-panel vector banner.");
-        img.style.display = 'none';
-        const vectorFallback = document.getElementById('vector-banner-fallback');
-        if (vectorFallback) vectorFallback.classList.remove('hidden');
-      }
+      img.onerror = null;
+      img.style.display = 'none';
+      const vectorFallback = document.getElementById('vector-banner-fallback');
+      if (vectorFallback) vectorFallback.classList.remove('hidden');
     }
 
     function handleQuoteBannerError(img) {
@@ -117,8 +100,7 @@
       
       <!-- Primary Widescreen Banner Image (3:1 Aspect Ratio) -->
       <img id="primary-royal-banner" 
-           src="image_c41ebe.jpg" 
-           data-attempt="0"
+           src="https://hotm-verify.mistressolera.workers.dev/banner"
            alt="House of the Monarch - Mistress Solena The Veiled Keeper" 
            onerror="handlePrimaryBannerError(this)"
            class="w-full h-auto max-h-[300px] object-cover object-center mx-auto transition-transform duration-700 group-hover:scale-[1.01]">
