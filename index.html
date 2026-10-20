@@ -90,6 +90,7 @@
     .gold-glow { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.35); }
     .purple-glow { box-shadow: 0 0 35px -5px rgba(124, 45, 18, 0.45); }
     
+      .vault-media { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   </style>
 </head>
 <body class="min-h-screen text-slate-200 flex flex-col antialiased selection:bg-gold-500 selection:text-slate-950">
@@ -517,6 +518,17 @@
   </main>
 
   <!-- PATRON VIP ACCESS / SIGN-IN MODAL -->
+  <!-- Vault photo lightbox (filled only for signed-in patrons) -->
+  <div id="vault-lightbox" class="hidden fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target===this)closeVaultLightbox()">
+    <button type="button" onclick="closeVaultLightbox()" aria-label="Close" class="absolute top-3 right-3 w-10 h-10 rounded-full border border-gold-500/40 bg-royal-950 text-gold-300 text-xl leading-none">&times;</button>
+    <figure class="max-w-5xl w-full flex flex-col items-center gap-3">
+      <img id="vault-lightbox-img" alt="" draggable="false" class="vault-media max-h-[80vh] max-w-full rounded-xl border border-gold-500/30 shadow-2xl select-none" />
+      <figcaption class="text-center">
+        <div id="vault-lightbox-title" class="font-cinzel text-gold-300 font-semibold"></div>
+        <div id="vault-lightbox-caption" class="text-xs text-slate-400 mt-1 whitespace-pre-line"></div>
+      </figcaption>
+    </figure>
+  </div>
   <div id="vip-gate-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
     <div class="max-w-md w-full bg-slate-900 border border-gold-500/40 rounded-3xl p-6 space-y-5 shadow-2xl relative">
       <button onclick="closeVIPModal()" class="absolute top-4 right-4 text-slate-400 hover:text-gold-300 text-sm p-1">✕</button>
@@ -656,6 +668,7 @@
       }
     }
     function setVaultLocked(msg) {
+      clearTimeout(vaultRefreshTimer); closeVaultLightbox();
       const content = document.getElementById('vault-content');
       content.innerHTML = '';
       content.classList.add('hidden');
@@ -678,7 +691,12 @@
         const data = await res.json();
         if (!res.ok || !data.html) throw new Error('vault unavailable');
         const content = document.getElementById('vault-content');
-        content.innerHTML = data.html;
+        if (Array.isArray(data.items) && data.items.length) {
+          content.replaceChildren(renderVaultGallery(data.items));
+          scheduleVaultRefresh(data.expiresIn);
+        } else {
+          content.innerHTML = data.html; // locked placeholder tiles when there is no media yet
+        }
         content.classList.remove('hidden');
         document.getElementById('vault-locked').classList.add('hidden');
         document.getElementById('vip-signed-in-handle').textContent = data.handle;
@@ -690,6 +708,62 @@
       } catch (e) {
         return false;
       }
+    }
+    // ---- Vault gallery: media come with short-lived signed URLs from the verify Worker ----
+    let vaultRefreshTimer = null;
+    function vaultEl(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+    function noSave(el) { el.addEventListener('contextmenu', e => e.preventDefault()); el.setAttribute('draggable', 'false'); }
+    function renderVaultGallery(items) {
+      const wrap = vaultEl('div', 'p-6 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-4');
+      wrap.appendChild(vaultEl('h3', 'font-cinzel text-xl font-bold text-gold-300', 'The Sovereign Vault'));
+      wrap.appendChild(vaultEl('p', 'text-xs text-slate-400', 'Private media for verified patrons. Newest first.'));
+      const grid = vaultEl('div', 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2');
+      for (const it of items) {
+        const card = vaultEl('div', 'p-3 rounded-xl border border-slate-800 bg-slate-950/80 space-y-2');
+        const frame = vaultEl('div', 'rounded-lg overflow-hidden bg-royal-900 border border-gold-500/20 flex items-center justify-center');
+        if (it.kind === 'video') {
+          const v = document.createElement('video');
+          v.className = 'vault-media w-full max-h-80 bg-black';
+          v.controls = true; v.preload = 'metadata'; v.playsInline = true;
+          v.setAttribute('playsinline', ''); v.setAttribute('controlsList', 'nodownload noremoteplayback'); v.disablePictureInPicture = true;
+          v.src = it.url; noSave(v); frame.appendChild(v);
+        } else {
+          const img = document.createElement('img');
+          img.className = 'vault-media w-full h-56 object-cover cursor-zoom-in select-none';
+          img.loading = 'lazy'; img.alt = it.title || 'Vault photo'; img.src = it.url; noSave(img);
+          img.addEventListener('click', () => openVaultLightbox(it));
+          frame.appendChild(img);
+        }
+        card.appendChild(frame);
+        if (it.title) card.appendChild(vaultEl('h4', 'font-semibold text-sm text-slate-200', it.title));
+        if (it.caption) card.appendChild(vaultEl('p', 'text-[11px] text-slate-400 whitespace-pre-line', it.caption));
+        grid.appendChild(card);
+      }
+      wrap.appendChild(grid);
+      wrap.appendChild(vaultEl('p', 'text-[10px] text-slate-500', 'Vault media is for your eyes only. Please do not share or redistribute.'));
+      return wrap;
+    }
+    function openVaultLightbox(it) {
+      const img = document.getElementById('vault-lightbox-img');
+      img.src = it.url; img.alt = it.title || 'Vault photo';
+      document.getElementById('vault-lightbox-title').textContent = it.title || '';
+      document.getElementById('vault-lightbox-caption').textContent = it.caption || '';
+      document.getElementById('vault-lightbox').classList.remove('hidden');
+    }
+    function closeVaultLightbox() {
+      document.getElementById('vault-lightbox').classList.add('hidden');
+      document.getElementById('vault-lightbox-img').removeAttribute('src');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVaultLightbox(); });
+    noSave(document.getElementById('vault-lightbox-img'));
+    // Signed links last about 2 hours; refresh them quietly before they expire (but not mid-playback).
+    function scheduleVaultRefresh(seconds) {
+      clearTimeout(vaultRefreshTimer);
+      vaultRefreshTimer = setTimeout(function again() {
+        const playing = [...document.querySelectorAll('#vault-content video')].some(v => !v.paused && !v.ended);
+        if (playing) { vaultRefreshTimer = setTimeout(again, 5 * 60 * 1000); return; }
+        if (localStorage.getItem(PATRON_TOKEN)) loadVault();
+      }, Math.max(60, (seconds || 7200) - 900) * 1000);
     }
     async function patronSignOut() {
       const token = localStorage.getItem(PATRON_TOKEN);
