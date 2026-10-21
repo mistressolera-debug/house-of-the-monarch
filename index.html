@@ -3,6 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Adult content label (RTA) -->
+  <meta name="rating" content="adult">
+  <meta name="rating" content="RTA-5042-1996-1400-1577-RTA">
+  <!-- 18+ entry gate: content stays hidden + blurred until the visitor confirms (remembered 30 days). -->
+  <script>
+    (function () {
+      var ok = false;
+      try { var t = Number(localStorage.getItem('hotm_age_ok')); ok = t > 0 && Date.now() - t < 30 * 864e5; } catch (e) {}
+      if (ok) document.documentElement.classList.add('ag-ok');
+    })();
+  </script>
+  <style>
+    html:not(.ag-ok), html:not(.ag-ok) body { overflow: hidden !important; height: 100% !important; overscroll-behavior: none; }
+    html:not(.ag-ok) body > *:not(#age-gate):not(noscript):not(script) {
+      filter: blur(28px) brightness(.35) !important; pointer-events: none !important; user-select: none !important; -webkit-user-select: none !important;
+    }
+    #age-gate { display: none; }
+    html:not(.ag-ok) #age-gate {
+      display: flex; position: fixed; inset: 0; z-index: 2147483000; align-items: center; justify-content: center; padding: 18px;
+      background: radial-gradient(circle at 50% 0%, rgba(32,8,59,.94) 0%, rgba(9,3,20,.96) 60%, rgba(3,1,8,.98) 100%);
+      overflow-y: auto; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #e2e8f0;
+    }
+    #age-gate .ag-card {
+      width: 100%; max-width: 460px; margin: auto; text-align: center; background: #0f0820; border: 1px solid rgba(245,158,11,.45);
+      border-radius: 28px; padding: 30px 24px 24px; box-shadow: 0 0 40px -8px rgba(245,158,11,.4), 0 25px 60px rgba(0,0,0,.6);
+    }
+    #age-gate .ag-seal { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 999px; border: 1px solid rgba(245,158,11,.5);
+      display: flex; align-items: center; justify-content: center; background: #090314; color: #fbbf24; font: 700 20px 'Cinzel', Georgia, serif; letter-spacing: .02em; }
+    #age-gate .ag-eyebrow { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #fbbf24; margin: 0 0 6px; }
+    #age-gate h2 { font: 700 clamp(22px, 6vw, 28px)/1.15 'Cinzel', Georgia, serif; color: #fcd34d; margin: 0 0 14px; }
+    #age-gate p { font-size: 14px; line-height: 1.6; color: #cbd5e1; margin: 0 0 12px; }
+    #age-gate .ag-small { font-size: 12px; color: #94a3b8; }
+    #age-gate .ag-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+    #age-gate button { min-height: 48px; border-radius: 999px; font: 700 14px 'Plus Jakarta Sans', system-ui, sans-serif; letter-spacing: .04em; cursor: pointer; }
+    #age-gate #ag-enter { border: 0; color: #0f0a03; background: linear-gradient(90deg, #f59e0b, #d97706); box-shadow: 0 8px 24px -8px rgba(245,158,11,.6); }
+    #age-gate #ag-leave { border: 1px solid #334155; color: #cbd5e1; background: transparent; }
+    #age-gate button:focus-visible { outline: 3px solid #fde68a; outline-offset: 3px; }
+    #age-gate .ag-nojs { display: none; }
+  </style>
+  <noscript>
+    <style>
+      #age-gate .ag-actions { display: none !important; }
+      #age-gate .ag-nojs { display: block !important; }
+    </style>
+  </noscript>
   <title>House of the Monarch | VIP Sovereign Portal</title>
   
   <!-- Tailwind CSS & Lucide Icons -->
@@ -94,6 +139,59 @@
   </style>
 </head>
 <body class="min-h-screen text-slate-200 flex flex-col antialiased selection:bg-gold-500 selection:text-slate-950">
+
+  <!-- 18+ ENTRY GATE (no third-party service; patron ID checks happen privately later) -->
+  <div id="age-gate" role="dialog" aria-modal="true" aria-labelledby="ag-title" aria-describedby="ag-desc">
+    <div class="ag-card">
+      <div class="ag-seal" aria-hidden="true">18+</div>
+      <p class="ag-eyebrow">House of the Monarch</p>
+      <h2 id="ag-title">Adults Only</h2>
+      <p id="ag-desc">This website contains adult content. It is intended only for adults aged 18 or older, or the age of majority where you live if that is higher.</p>
+      <p class="ag-small">By entering you confirm that you are of legal age and that viewing adult material is lawful where you are.</p>
+      <div class="ag-actions">
+        <button type="button" id="ag-enter">I am 18 or older, Enter</button>
+        <button type="button" id="ag-leave">Leave</button>
+      </div>
+      <p class="ag-nojs">Please enable JavaScript to confirm your age and enter this site.</p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var root = document.documentElement, gate = document.getElementById('age-gate');
+      var enter = document.getElementById('ag-enter'), leave = document.getElementById('ag-leave');
+      function locked() { return !root.classList.contains('ag-ok'); }
+      function setInert(on) {
+        var kids = document.body ? document.body.children : [];
+        for (var i = 0; i < kids.length; i++) {
+          var el = kids[i];
+          if (el === gate || el.tagName === 'SCRIPT' || el.tagName === 'NOSCRIPT') continue;
+          if (on) { el.setAttribute('inert', ''); el.setAttribute('aria-hidden', 'true'); }
+          else { el.removeAttribute('inert'); el.removeAttribute('aria-hidden'); }
+        }
+      }
+      if (!locked()) { gate.parentNode.removeChild(gate); return; }
+      enter.addEventListener('click', function () {
+        try { localStorage.setItem('hotm_age_ok', String(Date.now())); } catch (e) {}
+        root.classList.add('ag-ok'); setInert(false);
+        window.removeEventListener('keydown', onKey, true);
+        gate.parentNode.removeChild(gate);
+      });
+      leave.addEventListener('click', function () { window.location.href = 'https://www.google.com'; });
+      function onKey(e) {
+        if (!locked()) return;
+        if (e.key === 'Escape' || e.key === 'Esc') { e.preventDefault(); e.stopImmediatePropagation(); return; }
+        if (e.key === 'Tab') {                       // keep focus on the two gate buttons
+          e.preventDefault();
+          (document.activeElement === enter ? leave : enter).focus();
+        }
+      }
+      window.addEventListener('keydown', onKey, true);
+      document.addEventListener('focusin', function (e) { if (locked() && !gate.contains(e.target)) enter.focus(); });
+      enter.focus();
+      // Later page elements are made inert too once the page has been parsed.
+      document.addEventListener('DOMContentLoaded', function () { if (locked()) { setInert(true); enter.focus(); } });
+    })();
+  </script>
 
   <!-- TOP ROYAL BANNER HEADER DISPLAY -->
   <div class="w-full bg-slate-950 border-b border-gold-500/30 overflow-hidden shadow-2xl relative">
