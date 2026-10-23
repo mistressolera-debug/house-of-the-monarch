@@ -107,7 +107,7 @@ export const listDesk = createServerFn({ method: "GET" }).handler(
     const rows = await sql<{ starts_at: string; duration: string }>`
       select starts_at::text as starts_at, duration
       from bookings
-      where status in ('held', 'pending') and starts_at > now()
+      where status = 'held' and starts_at > now()
     `;
     const taken: HeldInterval[] = rows.map((row) => ({
       startIso: new Date(row.starts_at).toISOString(),
@@ -145,7 +145,7 @@ export const createBooking = createServerFn({ method: "POST" })
     const held = await sql<{ starts_at: string; duration: string }>`
       select starts_at::text as starts_at, duration
       from bookings
-      where status in ('held', 'pending') and starts_at > now()
+      where status = 'held' and starts_at > now()
     `;
     const taken: HeldInterval[] = held.map((row) => ({
       startIso: new Date(row.starts_at).toISOString(),
@@ -195,17 +195,8 @@ export const createBooking = createServerFn({ method: "POST" })
 export const confirmTribute = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((id: number) => id)
-  .handler(async ({ context, data: id }): Promise<BookingRecord> => {
-    const sql = await getSql();
-    const updated = await sql<BookingRow>`
-      update bookings
-      set status = 'held', tribute_sent_at = now()
-      where id = ${id} and user_id = ${context.userId} and status = 'pending'
-      returning id, starts_at::text as starts_at, duration, status, note,
-                tribute_code, deposit_cents
-    `;
-    if (!updated[0]) throw new Error("That hour is not waiting on tribute.");
-    return toBooking(updated[0]);
+  .handler(async (): Promise<BookingRecord> => {
+    throw new Error("The hour is held when Throne confirms the deposit.");
   });
 
 export const cancelBooking = createServerFn({ method: "POST" })
