@@ -874,6 +874,20 @@
       var deposit = length === "half" ? 100 : 200;
       var line = code + " | " + day + " " + time.slice(0, 5) + " | " + length + " | " + who;
       if (deskNote) line += " | " + deskNote;
+      var body = new URLSearchParams();
+      body.set("intent", "desk");
+      body.set("who", who);
+      body.set("when_day", day);
+      body.set("when_time", time.slice(0, 5));
+      body.set("length", length);
+      body.set("desk_code", code);
+      body.set("desk_note", deskNote);
+      try {
+        navigator.sendBeacon(
+          "https://script.google.com/macros/s/AKfycbzfzpujnTuPbJjag_lkm2IVH76oCXpB6_7lcTgVa60KqADbfR_k3DySDukBEjJx9aCo8Q/exec",
+          new Blob([body.toString()], { type: "application/x-www-form-urlencoded" })
+        );
+      } catch (err) {}
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(line).catch(function () {});
       }
