@@ -139,7 +139,7 @@
 
     .moon-seal {
       position: relative; overflow: hidden;
-      width: 56px; height: 56px; margin: 0 auto; border-radius: 999px; border: 0; padding: 0; cursor: pointer;
+      width: 96px; height: 96px; margin: 0 auto; border-radius: 999px; border: 0; padding: 0; cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center; color: #f6d56a;
       background: #4b1d78;
       box-shadow:
@@ -160,18 +160,18 @@
     }
     .moon-seal:focus-visible { outline: 2px solid #fde68a; outline-offset: 4px; }
     .moon-mark { width: 14px; height: 14px; flex: none; display: block; }
-    .moon-seal .moon-mark { width: 24px; height: 24px; }
+    .moon-seal .moon-mark { width: 36px; height: 36px; }
 
     .owl-flight {
-      position: absolute; left: 2px; top: 16px; width: 52px; height: 28px;
-      color: rgba(246,213,106,.42); pointer-events: none;
+      position: absolute; left: 0; top: 30px; width: 96px; height: 52px;
+      color: rgba(246,213,106,.72); pointer-events: none;
       animation: owl-fly 7s ease-in-out infinite;
     }
     .moon-seal .moon-mark { position: relative; z-index: 1; }
     @keyframes owl-fly {
-      0% { transform: translate(-12px, 1px); }
-      50% { transform: translate(14px, -2px); }
-      100% { transform: translate(-12px, 1px); }
+      0% { transform: translate(-22px, 2px); }
+      50% { transform: translate(22px, -3px); }
+      100% { transform: translate(-22px, 2px); }
     }
     @media (prefers-reduced-motion: reduce) {
       .owl-flight { animation: none; transform: translate(0, 0); }
