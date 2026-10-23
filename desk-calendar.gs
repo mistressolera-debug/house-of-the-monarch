@@ -28,8 +28,7 @@ function doGet() {
 function handleIntent_(params) {
   try {
     var row = readIntent_(params);
-    var held = houseCalendar_().getEvents(row.start, row.end);
-    if (held.length) return html_("That hour is already held.");
+    if (houseCalendar_().getEvents(row.start, row.end).length) return html_("That hour is already held.");
     PropertiesService.getScriptProperties().setProperty("desk:" + row.code, JSON.stringify({
       code: row.code,
       who: row.who,
@@ -39,7 +38,7 @@ function handleIntent_(params) {
       end: row.end.toISOString(),
       created: Date.now()
     }));
-    return html_("The hour is not held. Put " + row.code + " in the Throne gift message.");
+    return html_("The hour is not held. Paste " + row.code + " into the Throne gift message.");
   } catch (err) {
     return html_(String(err && err.message ? err.message : err));
   }
@@ -49,26 +48,21 @@ function handleThrone_(body, key) {
   if (!THRONE_KEY || key !== THRONE_KEY) return html_("The desk did not recognize that call.");
   var payload = JSON.parse(body);
   var data = payload.data || {};
-  var message = String(data.message || "").toUpperCase();
-  var found = message.match(/DESK-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}/);
-  if (!found) return html_("No desk code.");
-  var code = found[0];
-  var raw = PropertiesService.getScriptProperties().getProperty("desk:" + code);
-  if (!raw) return html_("That code is not waiting.");
-  var row = JSON.parse(raw);
-  if (Date.now() - Number(row.created) > PENDING_MS) {
-    PropertiesService.getScriptProperties().deleteProperty("desk:" + code);
-    return html_("That code has expired.");
-  }
+  var message = String(data.message || "");
+  var codeMatch = message.toUpperCase().match(/DESK-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4}/);
+  if (!codeMatch) return html_("No desk code.");
+  var code = codeMatch[0];
+  var row = pendingRow_(code) || rowFromMessage_(message);
+  if (!row) return html_("That code is not waiting.");
   var cents = Number(data.amount != null ? data.amount : data.price);
   var need = row.length === "hour" ? 20000 : 10000;
   if (!(cents >= need)) return html_("The tribute is short of the deposit.");
-  var start = new Date(row.start);
-  var end = new Date(row.end);
+  var start = row.start instanceof Date ? row.start : new Date(row.start);
+  var end = row.end instanceof Date ? row.end : new Date(row.end);
   var cal = houseCalendar_();
   if (cal.getEvents(start, end).length) return html_("That hour was already held.");
   var event = cal.createEvent("Audience · " + row.who, start, end, {
-    description: "Deposit received on Throne.\n" + row.code + (row.note ? "\n" + row.note : "")
+    description: "Deposit received on Throne.\n" + code + (row.note ? "\n" + row.note : "")
   });
   event.removeAllReminders();
   [10080, 1440, 60, 30].forEach(function (minutes) {
@@ -79,11 +73,43 @@ function handleThrone_(body, key) {
   return html_("The hour is on House Bookings.");
 }
 
+function pendingRow_(code) {
+  var raw = PropertiesService.getScriptProperties().getProperty("desk:" + code);
+  if (!raw) return null;
+  var row = JSON.parse(raw);
+  if (Date.now() - Number(row.created) > PENDING_MS) {
+    PropertiesService.getScriptProperties().deleteProperty("desk:" + code);
+    return null;
+  }
+  return row;
+}
+
+function rowFromMessage_(message) {
+  var match = String(message).match(/(DESK-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{4})\s*\|\s*(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})\s*\|\s*(half|hour)\s*\|\s*([^|\n]+)(?:\|\s*([^\n]*))?/i);
+  if (!match) return null;
+  var built = readIntent_({
+    desk_code: match[1],
+    when_day: match[2],
+    when_time: match[3],
+    length: match[4].toLowerCase(),
+    who: match[5],
+    desk_note: match[6] || ""
+  });
+  return {
+    code: built.code,
+    who: built.who,
+    length: built.length,
+    note: built.note,
+    start: built.start,
+    end: built.end
+  };
+}
+
 function readIntent_(params) {
   var who = String(params.who || "").trim().slice(0, 40);
   var day = String(params.when_day || "");
   var time = String(params.when_time || "");
-  var length = params.length === "half" ? "half" : "hour";
+  var length = String(params.length || "").toLowerCase() === "half" ? "half" : "hour";
   var note = String(params.desk_note || "").trim().slice(0, 280);
   var code = String(params.desk_code || "").toUpperCase();
   if (!who || !/^\d{4}-\d{2}-\d{2}$/.test(day) || !/^\d{2}:\d{2}$/.test(time)) {
@@ -143,10 +169,10 @@ function parseForm_(body) {
 
 function html_(message) {
   return HtmlService.createHtmlOutput(
-    '<p style="font-family:Georgia,serif;padding:2rem">' +
+    "<p style=\"font-family:Georgia,serif;padding:2rem\">" +
       String(message).replace(/[&<>]/g, function (ch) {
-        return { "&": "&", "<": "<", ">": ">" }[ch];
+        return ch === "&" ? "&" : ch === "<" ? "<" : ">";
       }) +
-    '</p><p><a href="https://houseofthemonarch.com/">Return to the house</a></p>'
+    "</p><p><a href=\"https://houseofthemonarch.com/\">Return to the house</a></p>"
   );
 }
