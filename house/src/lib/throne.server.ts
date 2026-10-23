@@ -1,5 +1,6 @@
 import { createPublicKey, verify } from "node:crypto";
 import { getSql } from "@/lib/db";
+import { overlaps, type Duration } from "@/lib/desk-slots";
 import { THRONE_USERNAME, tributeCodePattern } from "@/lib/throne";
 
 const THRONE_KEY = createPublicKey({
@@ -61,8 +62,14 @@ export async function applyThroneGift(body: string): Promise<{ ok: true; matched
   if (!code) return { ok: true, matched: false };
   const cents = centsFrom(data);
   const sql = await getSql();
-  const rows = await sql<{ id: number; deposit_cents: number; status: string }>`
-    select id, deposit_cents, status
+  const rows = await sql<{
+    id: number;
+    deposit_cents: number;
+    status: string;
+    starts_at: string;
+    duration: string;
+  }>`
+    select id, deposit_cents, status, starts_at::text as starts_at, duration
     from bookings
     where tribute_code = ${code}
   `;
@@ -71,6 +78,21 @@ export async function applyThroneGift(body: string): Promise<{ ok: true; matched
   if (row.status === "held") return { ok: true, matched: true };
   if (row.status !== "pending") return { ok: true, matched: false };
   if (cents < row.deposit_cents) return { ok: true, matched: false };
+  const others = await sql<{ starts_at: string; duration: string }>`
+    select starts_at::text as starts_at, duration
+    from bookings
+    where status = 'held' and id <> ${row.id}
+  `;
+  const mine: Duration = row.duration === "hour" ? "hour" : "half";
+  const blocked = others.some((other) =>
+    overlaps(
+      new Date(row.starts_at).getTime(),
+      mine,
+      new Date(other.starts_at).getTime(),
+      other.duration === "hour" ? "hour" : "half",
+    ),
+  );
+  if (blocked) return { ok: true, matched: false };
   const eventId = payload.event_id ?? `gift-${code}-${Date.now()}`;
   await sql`
     update bookings
