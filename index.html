@@ -338,10 +338,12 @@
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-8">
 
           <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
-        <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full border border-gold-500/40 bg-royal-950 text-gold-400" aria-hidden="true">
-          <i data-lucide="moon" class="h-5 w-5"></i>
-        </div>
-        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center">Hold an hour</h3>
+        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center flex items-center justify-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/>
+          </svg>
+          Hold an hour
+        </h3>
         <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450, tribute on Throne. A handle only. Clearance stays on the Audience Desk.</p>
         <form id="hotm-book-form" action="https://script.google.com/macros/s/AKfycbzfzpujnTuPbJjag_lkm2IVH76oCXpB6_7lcTgVa60KqADbfR_k3DySDukBEjJx9aCo8Q/exec" method="post" class="space-y-4">
           <div>
@@ -369,7 +371,12 @@
             <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-note">Note for the house</label>
             <input id="hotm-book-note" name="note" type="text" maxlength="280" placeholder="Optional" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
           </div>
-          <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all">Reserve this hour</button>
+          <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all inline-flex items-center justify-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path fill="#0f172a" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/>
+            </svg>
+            Reserve this hour
+          </button>
         </form>
       </div>
 
