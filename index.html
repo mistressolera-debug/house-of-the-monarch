@@ -138,15 +138,30 @@
       .vault-media { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
     .moon-seal {
-      width: 46px; height: 46px; margin: 0 auto; border-radius: 999px; border: 1px solid rgba(251,191,36,.55);
-      background: radial-gradient(circle at 32% 28%, rgba(253,230,138,.2), rgba(9,3,20,.15) 46%, #090314 72%);
-      box-shadow: 0 0 18px -8px rgba(245,158,11,.85), inset 0 0 0 1px rgba(253,230,138,.12);
-      display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; color: #fbbf24;
-      transition: transform .25s ease, box-shadow .25s ease;
+      width: 56px; height: 56px; margin: 0 auto; border-radius: 999px; border: 0; padding: 0; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; color: #fde68a;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(253,230,138,.22), transparent 42%),
+        radial-gradient(circle at 50% 58%, #1a0a30 0%, #090314 70%);
+      box-shadow:
+        inset 0 0 0 1px rgba(253,230,138,.78),
+        inset 0 0 0 5px rgba(9,3,20,.92),
+        inset 0 0 0 6px rgba(251,191,36,.35),
+        0 0 22px -10px rgba(245,158,11,.95);
+      transition: color .25s ease, box-shadow .25s ease, transform .25s ease;
     }
-    .moon-seal:hover { transform: translateY(-1px); box-shadow: 0 0 24px -6px rgba(245,158,11,.9), inset 0 0 0 1px rgba(253,230,138,.2); }
-    .moon-seal:focus-visible { outline: 2px solid #fde68a; outline-offset: 3px; }
-    .moon-mark { width: 15px; height: 15px; flex: none; }
+    .moon-seal:hover {
+      color: #fffbeb;
+      transform: translateY(-1px);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,251,235,.95),
+        inset 0 0 0 5px rgba(9,3,20,.92),
+        inset 0 0 0 6px rgba(253,230,138,.7),
+        0 0 26px -8px rgba(245,158,11,1);
+    }
+    .moon-seal:focus-visible { outline: 2px solid #fde68a; outline-offset: 4px; }
+    .moon-mark { width: 14px; height: 14px; flex: none; display: block; }
+    .moon-seal .moon-mark { width: 24px; height: 24px; }
 
   </style>
 </head>
@@ -351,7 +366,7 @@
 
           <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <div class="text-center">
-          <button type="button" class="moon-seal" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+          <button type="button" class="moon-seal" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.16em] mt-3">Hold an hour</h3>
         </div>
         <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450, tribute on Throne. A handle only. Clearance stays on the Audience Desk.</p>
@@ -383,7 +398,7 @@
           </div>
           <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all inline-flex items-center justify-center gap-2">
             <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true">
-              <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+              <path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
             </svg>
             Reserve this hour
           </button>
@@ -622,7 +637,7 @@
     <section id="section-audience" class="tab-section hidden space-y-8">
       <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <div class="text-center">
-          <button type="button" class="moon-seal" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+          <button type="button" class="moon-seal" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.08em] mt-3">Retainer Audience Application</h3>
         </div>
         <p class="text-xs text-slate-400 text-center">Complete 18+ verification so your application can be reviewed privately.</p>
@@ -660,7 +675,7 @@
             <span>I am 18 or older and I consent to this ID check as described above.</span>
           </label>
           <button type="submit" id="hotm-apply-submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all inline-flex items-center justify-center gap-2">
-            <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Submit Clearance Request
+            <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>Submit Clearance Request
           </button>
           <p id="hotm-apply-status" class="text-xs text-center text-slate-400" aria-live="polite"></p>
         </form>
@@ -691,7 +706,7 @@
         <div class="w-12 h-12 rounded-full border border-gold-500/40 bg-royal-950 mx-auto flex items-center justify-center text-gold-400 mb-2 shadow-inner">
           <i data-lucide="key" class="w-6 h-6"></i>
         </div>
-        <button type="button" class="moon-seal" aria-label="Continue" onclick="submitOpenHouseForm()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+        <button type="button" class="moon-seal" aria-label="Continue" onclick="submitOpenHouseForm()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
           <h3 class="font-cinzel text-xl font-bold text-gold-300 tracking-[0.14em] mt-3">Sovereign Patron Gate</h3>
         <p class="text-xs text-slate-400">Enter your verified court key or apply for 18+ clearance.</p>
       </div>
@@ -715,7 +730,7 @@
         </div>
         <p id="vip-login-error" class="hidden text-xs text-rose-400 text-center" aria-live="polite"></p>
         <button id="vip-login-submit" type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg disabled:opacity-60 inline-flex items-center justify-center gap-2">
-          <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Authenticate & Enter
+          <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>Authenticate & Enter
         </button>
       </form>
 
@@ -723,7 +738,7 @@
             <form id="vip-form-apply" onsubmit="event.preventDefault(); handleVIPApply();" class="hidden space-y-4">
         <p class="text-xs text-slate-400 leading-relaxed">New patrons verify through the Audience Desk. You will upload an ID photo and selfie for private review. Images are deleted after review (or after 30 days if still pending).</p>
         <button type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs inline-flex items-center justify-center gap-2">
-          <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Open Audience Desk
+          <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>Open Audience Desk
         </button>
       </form>
 
