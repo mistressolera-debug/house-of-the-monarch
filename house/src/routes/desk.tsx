@@ -7,7 +7,6 @@ import {
   type Duration,
   type HeldInterval,
   cancelBooking,
-  confirmTribute,
   createBooking,
   listDesk,
   listMyBookings,
@@ -119,7 +118,7 @@ function DeskPage() {
       setNote("");
       setSelected("");
       await refresh();
-      toast.success("The hour is reserved. Send the deposit on Throne.");
+      toast.success("Send the deposit on Throne. The hour is not held until it arrives.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "The desk did not take the hour.");
     } finally {
@@ -141,19 +140,6 @@ function DeskPage() {
     }
   }
 
-  async function markTribute(id: number) {
-    setBusy(true);
-    try {
-      const row = await confirmTribute({ data: id });
-      setMine((current) => current.map((item) => (item.id === id ? row : item)));
-      await refresh();
-      toast.success("The house will match the tribute on Throne.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "The desk could not mark the tribute.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function copyCode(code: string) {
     try {
@@ -386,14 +372,6 @@ function DeskPage() {
                               onClick={() => void copyCode(row.tributeCode)}
                             >
                               Copy code
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              disabled={busy}
-                              onClick={() => void markTribute(row.id)}
-                            >
-                              Tribute is sent
                             </Button>
                           </div>
                         ) : null}
