@@ -433,7 +433,7 @@
           <button type="button" class="title-card" aria-label="Mistress Solena, Monarch of the Moon" onclick="document.getElementById('hotm-book-form').requestSubmit()"><video class="title-card-video" src="mistress-solena-title.mp4" autoplay muted loop playsinline></video><span class="starfall" aria-hidden="true"><i style="left:6%;animation-duration:6.4s;animation-delay:-0.4s;--drift:14px"></i><i class="spark" style="left:12%;animation-duration:9.2s;animation-delay:-2.1s;--drift:-10px"></i><i style="left:18%;animation-duration:7.6s;animation-delay:-1.2s;--drift:18px"></i><i style="left:24%;animation-duration:10.8s;animation-delay:-3.4s;--drift:8px"></i><i class="spark" style="left:31%;animation-duration:6.8s;animation-delay:-0.8s;--drift:-16px"></i><i style="left:37%;animation-duration:9.8s;animation-delay:-2.8s;--drift:12px"></i><i style="left:43%;animation-duration:7.2s;animation-delay:-1.6s;--drift:-8px"></i><i class="spark" style="left:49%;animation-duration:11.6s;animation-delay:-4.2s;--drift:20px"></i><i style="left:55%;animation-duration:6.2s;animation-delay:-0.2s;--drift:-14px"></i><i style="left:61%;animation-duration:8.8s;animation-delay:-2.4s;--drift:9px"></i><i class="spark" style="left:67%;animation-duration:10.2s;animation-delay:-3.1s;--drift:-18px"></i><i style="left:73%;animation-duration:7.4s;animation-delay:-1.1s;--drift:15px"></i><i style="left:79%;animation-duration:9.6s;animation-delay:-3.8s;--drift:-6px"></i><i class="spark" style="left:86%;animation-duration:6.6s;animation-delay:-0.6s;--drift:11px"></i><i style="left:92%;animation-duration:11.2s;animation-delay:-2.6s;--drift:-12px"></i><i style="left:9%;animation-duration:8.4s;animation-delay:-3.6s;--drift:22px"></i><i style="left:21%;animation-duration:10.4s;animation-delay:-1.8s;--drift:-20px"></i><i class="spark" style="left:33%;animation-duration:7.8s;animation-delay:-4.6s;--drift:6px"></i><i style="left:46%;animation-duration:9.4s;animation-delay:-0.9s;--drift:-9px"></i><i style="left:58%;animation-duration:7.0s;animation-delay:-3.2s;--drift:16px"></i><i class="spark" style="left:70%;animation-duration:11.0s;animation-delay:-1.4s;--drift:-11px"></i><i style="left:82%;animation-duration:8.2s;animation-delay:-4.8s;--drift:7px"></i><i style="left:15%;animation-duration:12.2s;animation-delay:-2.2s;--drift:-15px"></i><i style="left:52%;animation-duration:5.8s;animation-delay:-1.9s;--drift:13px"></i><i style="left:88%;animation-duration:8.6s;animation-delay:-0.3s;--drift:-7px"></i><i class="spark" style="left:4%;animation-duration:10.0s;animation-delay:-4.0s;--drift:10px"></i><i style="left:96%;animation-duration:7.2s;animation-delay:-2.9s;--drift:-13px"></i><i style="left:40%;animation-duration:12.8s;animation-delay:-5.1s;--drift:4px"></i></span></button>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.16em] mt-3">Hold an hour</h3>
         </div>
-        <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450. The deposit is $100 or $200 on Throne. Put the desk code in the gift message. House Bookings is written only after that tribute arrives.</p>
+        <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450. The deposit is $100 or $200 on Throne. Paste the copied desk line into the Throne gift message. House Bookings is written only after that tribute arrives.</p>
         <form id="hotm-book-form" class="space-y-4" onsubmit="return hotmOpenDeposit(event)">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-alias">Handle</label>
@@ -872,22 +872,13 @@
       if (hotmStart(day, time).getTime() < Date.now() + 2 * 60 * 60 * 1000) { say("Book at least two hours ahead."); return false; }
       var code = hotmDeskCode();
       var deposit = length === "half" ? 100 : 200;
-      var body = new URLSearchParams();
-      body.set("intent", "desk");
-      body.set("who", who);
-      body.set("when_day", day);
-      body.set("when_time", time);
-      body.set("length", length);
-      body.set("desk_code", code);
-      body.set("desk_note", deskNote);
-      try {
-        navigator.sendBeacon(
-          "https://script.google.com/macros/s/AKfycbzfzpujnTuPbJjag_lkm2IVH76oCXpB6_7lcTgVa60KqADbfR_k3DySDukBEjJx9aCo8Q/exec",
-          new Blob([body.toString()], { type: "application/x-www-form-urlencoded" })
-        );
-      } catch (err) {}
-      if (pay) pay.textContent = "The hour is not held yet. On Throne, put this code in the gift message, then send the $" + deposit + " deposit. House Bookings is written only after that tribute arrives.";
-      if (codeLine) codeLine.textContent = code;
+      var line = code + " | " + day + " " + time.slice(0, 5) + " | " + length + " | " + who;
+      if (deskNote) line += " | " + deskNote;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(line).catch(function () {});
+      }
+      if (pay) pay.textContent = "The hour is not held yet. This line is copied. Paste it into the Throne gift message, then send the $" + deposit + " deposit. House Bookings is written only after that tribute arrives.";
+      if (codeLine) codeLine.textContent = line;
       window.open(length === "half"
         ? "https://throne.com/mistresssolena/collections/100-crescent-patronage"
         : "https://throne.com/mistresssolena/collections/200-lunar-patronage", "_blank", "noopener");
