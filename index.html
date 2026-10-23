@@ -161,6 +161,11 @@
     .moon-mark { width: 14px; height: 14px; flex: none; display: block; }
     .moon-seal .moon-mark { width: 24px; height: 24px; }
 
+    .house-marks { display: inline-flex; align-items: flex-end; justify-content: center; gap: 10px; }
+    .owl-watch { color: #e8c547; display: flex; line-height: 0; }
+    .owl-mark { width: 30px; height: 30px; display: block; }
+
+
   </style>
 </head>
 <body class="min-h-screen text-slate-200 flex flex-col antialiased selection:bg-gold-500 selection:text-slate-950">
@@ -364,7 +369,7 @@
 
           <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <div class="text-center">
-          <button type="button" class="moon-seal" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
+          <div class="house-marks"><button type="button" class="moon-seal" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button><span class="owl-watch" aria-hidden="true"><svg viewBox="0 0 64 64" class="owl-mark"><path fill="currentColor" d="M18 22 25 6l6 14C24 18 16 24 14 32c-4 2-6 8-4 14 4 10 14 14 22 14s18-4 22-14c2-6 0-12-4-14-2-8-10-14-17-16l6-14 7 16c-2-2-8-6-14-6s-12 4-14 6z"/><circle cx="26" cy="34" r="3.1" fill="#140828"/><circle cx="38" cy="34" r="3.1" fill="#140828"/><path fill="#140828" d="M30 40h4l-2 4z"/></svg></span></div>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.16em] mt-3">Hold an hour</h3>
         </div>
         <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450, tribute on Throne. A handle only. Clearance stays on the Audience Desk.</p>
@@ -635,7 +640,7 @@
     <section id="section-audience" class="tab-section hidden space-y-8">
       <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <div class="text-center">
-          <button type="button" class="moon-seal" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
+          <div class="house-marks"><button type="button" class="moon-seal" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button><span class="owl-watch" aria-hidden="true"><svg viewBox="0 0 64 64" class="owl-mark"><path fill="currentColor" d="M18 22 25 6l6 14C24 18 16 24 14 32c-4 2-6 8-4 14 4 10 14 14 22 14s18-4 22-14c2-6 0-12-4-14-2-8-10-14-17-16l6-14 7 16c-2-2-8-6-14-6s-12 4-14 6z"/><circle cx="26" cy="34" r="3.1" fill="#140828"/><circle cx="38" cy="34" r="3.1" fill="#140828"/><path fill="#140828" d="M30 40h4l-2 4z"/></svg></span></div>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.08em] mt-3">Retainer Audience Application</h3>
         </div>
         <p class="text-xs text-slate-400 text-center">Complete 18+ verification so your application can be reviewed privately.</p>
@@ -704,7 +709,7 @@
         <div class="w-12 h-12 rounded-full border border-gold-500/40 bg-royal-950 mx-auto flex items-center justify-center text-gold-400 mb-2 shadow-inner">
           <i data-lucide="key" class="w-6 h-6"></i>
         </div>
-        <button type="button" class="moon-seal" aria-label="Continue" onclick="submitOpenHouseForm()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button>
+        <div class="house-marks"><button type="button" class="moon-seal" aria-label="Continue" onclick="submitOpenHouseForm()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg></button><span class="owl-watch" aria-hidden="true"><svg viewBox="0 0 64 64" class="owl-mark"><path fill="currentColor" d="M18 22 25 6l6 14C24 18 16 24 14 32c-4 2-6 8-4 14 4 10 14 14 22 14s18-4 22-14c2-6 0-12-4-14-2-8-10-14-17-16l6-14 7 16c-2-2-8-6-14-6s-12 4-14 6z"/><circle cx="26" cy="34" r="3.1" fill="#140828"/><circle cx="38" cy="34" r="3.1" fill="#140828"/><path fill="#140828" d="M30 40h4l-2 4z"/></svg></span></div>
           <h3 class="font-cinzel text-xl font-bold text-gold-300 tracking-[0.14em] mt-3">Sovereign Patron Gate</h3>
         <p class="text-xs text-slate-400">Enter your verified court key or apply for 18+ clearance.</p>
       </div>
