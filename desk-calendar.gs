@@ -68,7 +68,7 @@ function handleThrone_(body, key) {
   [10080, 1440, 60, 30].forEach(function (minutes) {
     event.addPopupReminder(minutes);
   });
-  event.setColor(CalendarApp.EventColor.PURPLE);
+  event.setColor(CalendarApp.EventColor.MAUVE);
   PropertiesService.getScriptProperties().deleteProperty("desk:" + code);
   return html_("The hour is on House Bookings.");
 }
