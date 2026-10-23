@@ -568,6 +568,39 @@
     <!-- SECTION: AUDIENCE DESK -->
     <section id="section-audience" class="tab-section hidden space-y-8">
       <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
+        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center">Hold an hour</h3>
+        <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450, tribute on Throne. A handle only. Clearance is the form below.</p>
+        <form id="hotm-book-form" action="https://script.google.com/macros/s/AKfycbzfzpujnTuPbJjag_lkm2IVH76oCXpB6_7lcTgVa60KqADbfR_k3DySDukBEjJx9aCo8Q/exec" method="post" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-alias">Handle</label>
+            <input id="hotm-book-alias" name="alias" type="text" required maxlength="40" placeholder="The name for the hour" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-day">Date</label>
+              <input id="hotm-book-day" name="day" type="date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-time">Time</label>
+              <input id="hotm-book-time" name="time" type="time" required step="1800" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-duration">Length</label>
+            <select id="hotm-book-duration" name="duration" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+              <option value="half">Half hour · $225</option>
+              <option value="hour" selected>One hour · $450</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-note">Note for the house</label>
+            <input id="hotm-book-note" name="note" type="text" maxlength="280" placeholder="Optional" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+          </div>
+          <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all">Reserve this hour</button>
+        </form>
+      </div>
+
+      <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center">Retainer Audience Application</h3>
         <p class="text-xs text-slate-400 text-center">Complete 18+ verification so your application can be reviewed privately.</p>
 
