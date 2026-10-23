@@ -137,6 +137,9 @@
     
       .vault-media { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
+
+    .title-card { display: block; width: 100%; margin: 0 auto; padding: 0; border: 0; background: #090314; cursor: pointer; border-radius: 1rem; overflow: hidden; }
+    .title-card-video { width: 100%; height: auto; display: block; }
     .moon-seal {
       position: relative; overflow: hidden;
       width: 132px; height: 132px; margin: 0 auto; border-radius: 999px; border: 0; padding: 0; cursor: pointer;
@@ -381,7 +384,7 @@
 
           <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <div class="text-center">
-          <button type="button" class="moon-seal" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()"><img class="owl-flight" alt="" src="owl-seal-right.png"></button>
+          <button type="button" class="title-card" aria-label="Mistress Solena, Monarch of the Moon" onclick="document.getElementById('hotm-book-form').requestSubmit()"><video class="title-card-video" src="mistress-solena-title.mp4" autoplay muted loop playsinline></video></button>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.16em] mt-3">Hold an hour</h3>
         </div>
         <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450. The deposit is $100 or $200 on Throne, and only that tribute holds the hour. The calendar is not written before it arrives.</p>
