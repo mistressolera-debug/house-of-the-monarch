@@ -339,9 +339,7 @@
 
           <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
         <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center flex items-center justify-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/>
-          </svg>
+          <button type="button" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()" class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg></button>
           Hold an hour
         </h3>
         <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450, tribute on Throne. A handle only. Clearance stays on the Audience Desk.</p>
@@ -611,7 +609,7 @@
     <!-- SECTION: AUDIENCE DESK -->
     <section id="section-audience" class="tab-section hidden space-y-8">
       <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
-        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg>Retainer Audience Application</h3>
+        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center flex items-center justify-center gap-2"><button type="button" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()" class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg></button>Retainer Audience Application</h3>
         <p class="text-xs text-slate-400 text-center">Complete 18+ verification so your application can be reviewed privately.</p>
 
         <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-[11px] text-slate-300 space-y-2 leading-relaxed">
@@ -678,7 +676,7 @@
         <div class="w-12 h-12 rounded-full border border-gold-500/40 bg-royal-950 mx-auto flex items-center justify-center text-gold-400 mb-2 shadow-inner">
           <i data-lucide="key" class="w-6 h-6"></i>
         </div>
-        <h3 class="font-cinzel text-xl font-bold text-gold-300 flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg>Sovereign Patron Gate</h3>
+        <h3 class="font-cinzel text-xl font-bold text-gold-300 flex items-center justify-center gap-2"><button type="button" aria-label="Continue" onclick="submitOpenHouseForm()" class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg></button>Sovereign Patron Gate</h3>
         <p class="text-xs text-slate-400">Enter your verified court key or apply for 18+ clearance.</p>
       </div>
 
@@ -726,6 +724,17 @@
     lucide.createIcons();
 
     // Tab Switcher Function
+
+    function submitOpenHouseForm() {
+      var ids = ["vip-form-login", "vip-form-apply"];
+      for (var i = 0; i < ids.length; i++) {
+        var form = document.getElementById(ids[i]);
+        if (form && !form.classList.contains("hidden")) {
+          form.requestSubmit();
+          return;
+        }
+      }
+    }
     function switchMainTab(tabId) {
       document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
       const activeSection = document.getElementById(`section-${tabId}`);
