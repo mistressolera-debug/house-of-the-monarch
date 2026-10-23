@@ -433,7 +433,7 @@
           <button type="button" class="title-card" aria-label="Mistress Solena, Monarch of the Moon" onclick="document.getElementById('hotm-book-form').requestSubmit()"><video class="title-card-video" src="mistress-solena-title.mp4" autoplay muted loop playsinline></video><span class="starfall" aria-hidden="true"><i style="left:6%;animation-duration:6.4s;animation-delay:-0.4s;--drift:14px"></i><i class="spark" style="left:12%;animation-duration:9.2s;animation-delay:-2.1s;--drift:-10px"></i><i style="left:18%;animation-duration:7.6s;animation-delay:-1.2s;--drift:18px"></i><i style="left:24%;animation-duration:10.8s;animation-delay:-3.4s;--drift:8px"></i><i class="spark" style="left:31%;animation-duration:6.8s;animation-delay:-0.8s;--drift:-16px"></i><i style="left:37%;animation-duration:9.8s;animation-delay:-2.8s;--drift:12px"></i><i style="left:43%;animation-duration:7.2s;animation-delay:-1.6s;--drift:-8px"></i><i class="spark" style="left:49%;animation-duration:11.6s;animation-delay:-4.2s;--drift:20px"></i><i style="left:55%;animation-duration:6.2s;animation-delay:-0.2s;--drift:-14px"></i><i style="left:61%;animation-duration:8.8s;animation-delay:-2.4s;--drift:9px"></i><i class="spark" style="left:67%;animation-duration:10.2s;animation-delay:-3.1s;--drift:-18px"></i><i style="left:73%;animation-duration:7.4s;animation-delay:-1.1s;--drift:15px"></i><i style="left:79%;animation-duration:9.6s;animation-delay:-3.8s;--drift:-6px"></i><i class="spark" style="left:86%;animation-duration:6.6s;animation-delay:-0.6s;--drift:11px"></i><i style="left:92%;animation-duration:11.2s;animation-delay:-2.6s;--drift:-12px"></i><i style="left:9%;animation-duration:8.4s;animation-delay:-3.6s;--drift:22px"></i><i style="left:21%;animation-duration:10.4s;animation-delay:-1.8s;--drift:-20px"></i><i class="spark" style="left:33%;animation-duration:7.8s;animation-delay:-4.6s;--drift:6px"></i><i style="left:46%;animation-duration:9.4s;animation-delay:-0.9s;--drift:-9px"></i><i style="left:58%;animation-duration:7.0s;animation-delay:-3.2s;--drift:16px"></i><i class="spark" style="left:70%;animation-duration:11.0s;animation-delay:-1.4s;--drift:-11px"></i><i style="left:82%;animation-duration:8.2s;animation-delay:-4.8s;--drift:7px"></i><i style="left:15%;animation-duration:12.2s;animation-delay:-2.2s;--drift:-15px"></i><i style="left:52%;animation-duration:5.8s;animation-delay:-1.9s;--drift:13px"></i><i style="left:88%;animation-duration:8.6s;animation-delay:-0.3s;--drift:-7px"></i><i class="spark" style="left:4%;animation-duration:10.0s;animation-delay:-4.0s;--drift:10px"></i><i style="left:96%;animation-duration:7.2s;animation-delay:-2.9s;--drift:-13px"></i><i style="left:40%;animation-duration:12.8s;animation-delay:-5.1s;--drift:4px"></i></span></button>
           <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.16em] mt-3">Hold an hour</h3>
         </div>
-        <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450. The deposit is $100 or $200 on Throne. Paste the copied desk line into the Throne gift message. House Bookings is written only after that tribute arrives.</p>
+        <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450. The deposit is $100 or $200, on Throne or in Bitcoin. House Bookings is written only after that tribute arrives.</p>
         <form id="hotm-book-form" class="space-y-4" onsubmit="return hotmOpenDeposit(event)">
           <div>
             <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-alias">Handle</label>
@@ -460,14 +460,25 @@
             <label class="block text-xs font-semibold text-slate-300 mb-1" for="hotm-book-note">Note for the house</label>
             <input id="hotm-book-note" name="note" type="text" maxlength="280" placeholder="Optional" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
           </div>
-          <p class="text-xs text-center text-gold-300 leading-relaxed">When Throne opens, paste the gold line into the gift message box. That box is on the purchase, not in the gift description.</p>
+          <fieldset class="grid grid-cols-2 gap-2">
+            <legend class="block text-xs font-semibold text-slate-300 mb-2">Deposit</legend>
+            <label class="flex items-center justify-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs text-slate-200">
+              <input type="radio" name="hotm-pay" value="throne" checked onchange="hotmPayChoice()">
+              Throne
+            </label>
+            <label class="flex items-center justify-center gap-2 rounded-full border border-slate-800 bg-slate-950 px-3 py-2.5 text-xs text-slate-200">
+              <input type="radio" name="hotm-pay" value="bitcoin" onchange="hotmPayChoice()">
+              Bitcoin
+            </label>
+          </fieldset>
+          <p id="hotm-pay-note" class="text-xs text-center text-gold-300 leading-relaxed">When Throne opens, paste the gold line into the gift message box. That box is on the purchase, not in the gift description.</p>
           <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all inline-flex items-center justify-center gap-2">
             <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true">
               <path fill="currentColor" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
             </svg>
-            Pay the deposit on Throne
+            <span id="hotm-book-go">Pay the deposit on Throne</span>
           </button>
-          <p id="hotm-book-pay" class="text-xs text-center text-gold-300" aria-live="polite"></p><p id="hotm-book-code" class="text-center font-mono text-lg text-gold-300 tracking-widest"></p>
+          <p id="hotm-book-pay" class="text-xs text-center text-gold-300" aria-live="polite"></p><p id="hotm-book-code" class="text-center font-mono text-lg text-gold-300 tracking-widest"></p><p id="hotm-book-btc" class="hidden text-center font-mono text-xs text-gold-300 break-all"></p>
         </form>
       </div>
 
@@ -849,6 +860,20 @@
       for (var i = 0; i < bytes.length; i++) code += alphabet[bytes[i] % alphabet.length];
       return code;
     }
+    var HOTM_BTC = "bc1qgpncqpes2premlxy7kfdm67nfphjd00x9x7dzz";
+    function hotmPayMethod() {
+      var chosen = document.querySelector('input[name="hotm-pay"]:checked');
+      return chosen && chosen.value === "bitcoin" ? "bitcoin" : "throne";
+    }
+    function hotmPayChoice() {
+      var bitcoin = hotmPayMethod() === "bitcoin";
+      var note = document.getElementById("hotm-pay-note");
+      var go = document.getElementById("hotm-book-go");
+      if (note) note.textContent = bitcoin
+        ? "Bitcoin only, on the Bitcoin network. The address is copied when you press the button. Send the deposit there and keep the gold line. The hour is written after the Bitcoin arrives."
+        : "When Throne opens, paste the gold line into the gift message box. That box is on the purchase, not in the gift description.";
+      if (go) go.textContent = bitcoin ? "Pay the deposit in Bitcoin" : "Pay the deposit on Throne";
+    }
     function hotmOpenDeposit(event) {
       if (event && event.preventDefault) event.preventDefault();
       var who = document.getElementById("hotm-book-alias").value.trim();
@@ -889,8 +914,23 @@
           new Blob([body.toString()], { type: "application/x-www-form-urlencoded" })
         );
       } catch (err) {}
+      var bitcoin = hotmPayMethod() === "bitcoin";
+      var btcLine = document.getElementById("hotm-book-btc");
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(line).catch(function () {});
+        navigator.clipboard.writeText(bitcoin ? HOTM_BTC : line).catch(function () {});
+      }
+      if (bitcoin) {
+        if (pay) pay.textContent = "The hour is not held yet. Send $" + deposit + " in Bitcoin, on the Bitcoin network, to the address below. Keep the gold line so the house can match it. House Bookings is written only after the Bitcoin arrives.";
+        if (codeLine) codeLine.textContent = line;
+        if (btcLine) {
+          btcLine.textContent = HOTM_BTC;
+          btcLine.classList.remove("hidden");
+        }
+        return false;
+      }
+      if (btcLine) {
+        btcLine.textContent = "";
+        btcLine.classList.add("hidden");
       }
       if (pay) pay.textContent = "The hour is not held yet. This line is copied. Paste it into the Throne gift message, then send the $" + deposit + " deposit. House Bookings is written only after that tribute arrives.";
       if (codeLine) codeLine.textContent = line;
