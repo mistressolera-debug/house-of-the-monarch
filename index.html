@@ -136,6 +136,18 @@
     .purple-glow { box-shadow: 0 0 35px -5px rgba(124, 45, 18, 0.45); }
     
       .vault-media { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+    .moon-seal {
+      width: 46px; height: 46px; margin: 0 auto; border-radius: 999px; border: 1px solid rgba(251,191,36,.55);
+      background: radial-gradient(circle at 32% 28%, rgba(253,230,138,.2), rgba(9,3,20,.15) 46%, #090314 72%);
+      box-shadow: 0 0 18px -8px rgba(245,158,11,.85), inset 0 0 0 1px rgba(253,230,138,.12);
+      display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; color: #fbbf24;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .moon-seal:hover { transform: translateY(-1px); box-shadow: 0 0 24px -6px rgba(245,158,11,.9), inset 0 0 0 1px rgba(253,230,138,.2); }
+    .moon-seal:focus-visible { outline: 2px solid #fde68a; outline-offset: 3px; }
+    .moon-mark { width: 15px; height: 15px; flex: none; }
+
   </style>
 </head>
 <body class="min-h-screen text-slate-200 flex flex-col antialiased selection:bg-gold-500 selection:text-slate-950">
@@ -338,10 +350,10 @@
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-8">
 
           <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
-        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center flex items-center justify-center gap-2">
-          <button type="button" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()" class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg></button>
-          Hold an hour
-        </h3>
+        <div class="text-center">
+          <button type="button" class="moon-seal" aria-label="Reserve this hour" onclick="document.getElementById('hotm-book-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+          <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.16em] mt-3">Hold an hour</h3>
+        </div>
         <p class="text-xs text-slate-400 text-center leading-relaxed">In person, Ontario, 18+. Wednesday through Saturday, 6:00–10:00 pm Toronto. Book at least two hours ahead. A half hour is $225 and one hour is $450, tribute on Throne. A handle only. Clearance stays on the Audience Desk.</p>
         <form id="hotm-book-form" action="https://script.google.com/macros/s/AKfycbzfzpujnTuPbJjag_lkm2IVH76oCXpB6_7lcTgVa60KqADbfR_k3DySDukBEjJx9aCo8Q/exec" method="post" class="space-y-4">
           <div>
@@ -370,8 +382,8 @@
             <input id="hotm-book-note" name="note" type="text" maxlength="280" placeholder="Optional" class="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
           </div>
           <button type="submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all inline-flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-              <path fill="#0f172a" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/>
+            <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true">
+              <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
             </svg>
             Reserve this hour
           </button>
@@ -609,7 +621,10 @@
     <!-- SECTION: AUDIENCE DESK -->
     <section id="section-audience" class="tab-section hidden space-y-8">
       <div class="max-w-2xl mx-auto p-6 md:p-8 rounded-2xl border border-gold-500/30 bg-slate-900/80 space-y-6">
-        <h3 class="font-cinzel text-2xl font-bold text-gold-300 text-center flex items-center justify-center gap-2"><button type="button" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()" class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg></button>Retainer Audience Application</h3>
+        <div class="text-center">
+          <button type="button" class="moon-seal" aria-label="Submit clearance request" onclick="document.getElementById('hotm-apply-form').requestSubmit()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+          <h3 class="font-cinzel text-2xl font-bold text-gold-300 tracking-[0.08em] mt-3">Retainer Audience Application</h3>
+        </div>
         <p class="text-xs text-slate-400 text-center">Complete 18+ verification so your application can be reviewed privately.</p>
 
         <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-[11px] text-slate-300 space-y-2 leading-relaxed">
@@ -645,7 +660,7 @@
             <span>I am 18 or older and I consent to this ID check as described above.</span>
           </label>
           <button type="submit" id="hotm-apply-submit" class="w-full py-3 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-sm hover:brightness-110 transition-all inline-flex items-center justify-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#0f172a" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg>Submit Clearance Request
+            <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Submit Clearance Request
           </button>
           <p id="hotm-apply-status" class="text-xs text-center text-slate-400" aria-live="polite"></p>
         </form>
@@ -676,7 +691,8 @@
         <div class="w-12 h-12 rounded-full border border-gold-500/40 bg-royal-950 mx-auto flex items-center justify-center text-gold-400 mb-2 shadow-inner">
           <i data-lucide="key" class="w-6 h-6"></i>
         </div>
-        <h3 class="font-cinzel text-xl font-bold text-gold-300 flex items-center justify-center gap-2"><button type="button" aria-label="Continue" onclick="submitOpenHouseForm()" class="inline-flex cursor-pointer items-center justify-center border-0 bg-transparent p-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#fbbf24" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg></button>Sovereign Patron Gate</h3>
+        <button type="button" class="moon-seal" aria-label="Continue" onclick="submitOpenHouseForm()"><svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+          <h3 class="font-cinzel text-xl font-bold text-gold-300 tracking-[0.14em] mt-3">Sovereign Patron Gate</h3>
         <p class="text-xs text-slate-400">Enter your verified court key or apply for 18+ clearance.</p>
       </div>
 
@@ -699,7 +715,7 @@
         </div>
         <p id="vip-login-error" class="hidden text-xs text-rose-400 text-center" aria-live="polite"></p>
         <button id="vip-login-submit" type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 shadow-lg disabled:opacity-60 inline-flex items-center justify-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#0f172a" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg>Authenticate & Enter
+          <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Authenticate & Enter
         </button>
       </form>
 
@@ -707,7 +723,7 @@
             <form id="vip-form-apply" onsubmit="event.preventDefault(); handleVIPApply();" class="hidden space-y-4">
         <p class="text-xs text-slate-400 leading-relaxed">New patrons verify through the Audience Desk. You will upload an ID photo and selfie for private review. Images are deleted after review (or after 30 days if still pending).</p>
         <button type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs inline-flex items-center justify-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#0f172a" d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5z"/></svg>Open Audience Desk
+          <svg viewBox="0 0 24 24" class="moon-mark" aria-hidden="true"><path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>Open Audience Desk
         </button>
       </form>
 
