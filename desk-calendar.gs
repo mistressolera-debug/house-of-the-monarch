@@ -8,6 +8,9 @@
 var THRONE_KEY = "";
 var CALENDAR_NAME = "House Bookings";
 var PENDING_MS = 6 * 60 * 60 * 1000;
+// Leave blank to mail the Google account that owns this script.
+// Put another address here only if the note should go somewhere else.
+var NOTICE_MAIL = "";
 
 function doPost(e) {
   e = e || {};
@@ -70,7 +73,70 @@ function handleThrone_(body, key) {
   });
   event.setColor(CalendarApp.EventColor.MAUVE);
   PropertiesService.getScriptProperties().deleteProperty("desk:" + code);
+  try { notifyBooked_(row, start, end); } catch (mailErr) {}
   return html_("The hour is on House Bookings.");
+}
+
+function deskMailTo_() {
+  var set = String(NOTICE_MAIL || "").replace(/^\s+|\s+$/g, "");
+  if (set) return set;
+  return Session.getEffectiveUser().getEmail();
+}
+
+function notifyBooked_(row, start, end) {
+  var to = deskMailTo_();
+  if (!to) return;
+  var when = Utilities.formatDate(start, "America/Toronto", "EEE, MMM d, yyyy 'at' h:mm a");
+  var length = row.length === "half" ? "30 minutes" : "1 hour";
+  MailApp.sendEmail({
+    to: to,
+    subject: "House booking · " + row.who,
+    body: "A deposit landed and the hour is on House Bookings.\n\n"
+      + "Handle: " + row.who + "\n"
+      + "When: " + when + " Toronto\n"
+      + "Length: " + length + "\n"
+      + "Code: " + row.code + "\n"
+      + (row.note ? "Note: " + row.note + "\n" : "")
+      + "\nThis note stays on your Google account. It is not sent to the guest."
+  });
+}
+
+function installDeskMail() {
+  var found = false;
+  ScriptApp.getProjectTriggers().forEach(function (trigger) {
+    if (trigger.getHandlerFunction() === "deskReminders_") found = true;
+  });
+  if (!found) ScriptApp.newTrigger("deskReminders_").timeBased().everyMinutes(15).create();
+  var to = deskMailTo_();
+  MailApp.sendEmail(to, "House desk mail is on", "This is the test. A paid booking will mail this address, then again one day, one hour, and 30 minutes before.");
+}
+
+function deskReminders_() {
+  var now = Date.now();
+  var events = houseCalendar_().getEvents(new Date(now), new Date(now + 26 * 60 * 60 * 1000));
+  events.forEach(function (event) {
+    if (String(event.getTitle()).indexOf("Audience") !== 0) return;
+    var mins = (event.getStartTime().getTime() - now) / 60000;
+    maybeRemind_(event, mins, "day", 26 * 60, 22 * 60, "One day");
+    maybeRemind_(event, mins, "hour", 90, 45, "One hour");
+    maybeRemind_(event, mins, "half", 45, 15, "30 minutes");
+  });
+}
+
+function maybeRemind_(event, mins, key, open, close, label) {
+  if (mins > open || mins < close) return;
+  var prop = "mail:" + event.getId() + ":" + key;
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(prop)) return;
+  var to = deskMailTo_();
+  if (!to) return;
+  var when = Utilities.formatDate(event.getStartTime(), "America/Toronto", "EEE, MMM d 'at' h:mm a");
+  MailApp.sendEmail({
+    to: to,
+    subject: label + " · " + event.getTitle(),
+    body: label + " until a House hour.\n\n" + event.getTitle() + "\n" + when + " Toronto\n"
+  });
+  props.setProperty(prop, String(Date.now()));
 }
 
 function pendingRow_(code) {
