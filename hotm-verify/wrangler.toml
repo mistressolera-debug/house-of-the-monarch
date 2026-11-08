@@ -1,0 +1,29 @@
+name = "hotm-verify"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+workers_dev = true
+account_id = "<CLOUDFLARE_ACCOUNT_ID_REDACTED>"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "hotm-id-uploads"
+
+[vars]
+ALLOWED_ORIGIN = "https://houseofthemonarch.com"
+
+[triggers]
+crons = ["17 3 * * *"]
+
+# Secrets already on the live worker. Put replacements only; do not delete them:
+#   ENC_KEY, ADMIN_PW_HASH, TOTP_SECRET, SESSION_KEY
+# New secret, still absent until the mailbox owner creates it:
+#   SMTP_APP_PASSWORD  (Google app password for sj@monarchofthemoon.shop, 16 letters)
+# Optional SMTP_USER, if set, must be exactly sj@monarchofthemoon.shop or mail stays closed.
+# The SMTP host and port are fixed in code (smtp.gmail.com:465, implicit TLS). Do not add a host var.
+#
+# Patron recovery links are built only from ALLOWED_ORIGIN, or from CANONICAL_ORIGIN when that
+# var is set. Both must be a bare https origin (no path, user, or query). The request Host,
+# X-Forwarded-Host, and redirect fields are never used.
+# compatibility_date stays 2024-09-01. No compatibility flags. Workers TCP sockets are already on.
+# Single-use claims use an R2 conditional put (If-None-Match: *). That write is atomic.
+# Do not replace it with a read followed by a delete.
