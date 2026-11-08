@@ -6,18 +6,18 @@ This tree started from a local worker dated Nov 7 2026 08:52 America/Toronto. It
 
 ## What is implemented
 
-- `POST /patron/recovery/email` while signed in stores nothing until the patron proves they can read the mailbox. The confirmation link is bound to that account and that address.
+- `POST /patron/recovery/email` requires a live patron session and the current court key. A cross-origin browser request is rejected by the existing origin check. Issuing a link bumps `recoveryGen`, so an older link, including one already loaded into memory, cannot confirm after a newer enrollment or a key reset.
 - `POST /patron/recovery/email/confirm` sets `verifiedEmail` only from the token. A body field cannot choose a different address. Sessions and the court key stay as they are.
 - `POST /patron/recovery/request` accepts a handle only. The message goes to `verifiedEmail` on that account. Unknown handles, accounts with no verified email, and a missing mail binding all return the same `{"ok":true}` and send nothing.
-- `POST /patron/recovery/complete` sets a new court key with the existing PBKDF2 normalizer (at least 20 letters or numbers), bumps `recoveryGen`, deletes recovery tokens for that account, and deletes patron sessions. Admin password, TOTP, application status, and Vault membership are unchanged.
+- `POST /patron/recovery/complete` sets a new court key with the existing PBKDF2 normalizer (at least 20 letters or numbers). The account write is conditional and succeeds only when `recoveryGen` still matches the token. It bumps `recoveryGen` and `sessionGen`. Sessions are stamped with `sessionGen` at creation and rejected when the account has moved on, including a session created after the reset's delete list. Admin password, TOTP, application status, and Vault membership are unchanged.
 - Tokens are 32 random bytes. Only the SHA-256 hash is stored. Lifetime is 15 minutes. A token is valid only while `now < expiresAt`.
-- Single-use is an R2 `put` with `If-None-Match: *` on `patrons/recovery-used/<hash>`. R2 commits that condition with the write. The password update is a second conditional put, `If-Match` on the patron object, so two different links cannot both change the key. A read followed by a delete is not the claim.
+- Single-use is an R2 `put` with `If-None-Match: *` on `patrons/recovery-used/<hash>`. Cloudflare's R2 consistency document (updated Oct 14, 2026) says that header is evaluated atomically with the write, and concurrent `If-None-Match: *` puts on one key have a single winner. The password and email updates use `If-Match` on the patron object and re-check `recoveryGen` inside that write. A read followed by a delete is not the claim. Recovery rate limits use the same conditional put. The older login and application counters remain read-modify-write and are not treated as atomic.
 - `GET` and `HEAD` under `/patron/recovery` return 405 and do not claim a token. Links use a URL fragment on the site origin, so a prefetch of the page does not send the token to the worker.
 - The link origin is `CANONICAL_ORIGIN` if set, otherwise `ALLOWED_ORIGIN`. The value must be a bare `https` origin. `Host`, `X-Forwarded-Host`, and redirect fields are not read.
 
 ## Mail is not live
 
-No mail provider, domain, or API key is configured. `env.MAIL.send` is absent, so a request acknowledges and does not deliver. A test double that records `{ to, subject, text }` proves the envelope in unit tests. That double is not a production sender.
+No mail provider, domain, or API key is configured. There is no adapter that talks to a mail service. The code calls `env.MAIL.send({ to, subject, text })` when that function exists and otherwise sends nothing. A test double that records the envelope is not live delivery.
 
 To turn delivery on later, add a Worker binding named `MAIL` whose `send({ to, subject, text })` delivers to the single `to` address. Keep the credential in a Worker secret. Do not send when `verifiedEmail` is missing. Do not add the application email onto the patron. Leave `CANONICAL_ORIGIN` unset, or set it to `https://houseofthemonarch.com`, because the fragment form lives on that page. `ALLOWED_ORIGIN` is already that origin.
 
@@ -30,11 +30,21 @@ Existing R2 bucket `hotm-id-uploads`, binding `BUCKET`. New keys:
 - `patrons/recovery/<sha256>` token record
 - `patrons/recovery-idx/<accountId>/<sha256>`
 - `patrons/recovery-used/<sha256>` claim marker
-- `verifiedEmail`, `emailVerifiedAt`, and `recoveryGen` on the patron JSON, added when an address is confirmed or a key changes
+- `verifiedEmail`, `emailVerifiedAt`, and `recoveryGen` on the patron JSON. `sessionGen` is added when a court key changes. Sessions store the generation they were issued with.
 
 No new bucket, Durable Object, or paid plan is required. Conditional puts have been in the R2 Workers API since 2022. Before release, confirm a conflicting `If-None-Match: *` put returns `null` on the account that hosts this bucket.
 
 Expired token objects are removed by the existing daily cron. Patron accounts, ID files, Vault objects, and sessions are not deleted by that sweep.
+
+## Runtime check of the R2 binding
+
+Miniflare 4.20260730.0 (local workerd, no production bucket) accepted the same `onlyIf` headers the worker uses:
+
+- two concurrent `If-None-Match: *` puts of one key: 1 winner
+- two concurrent `If-None-Match: *` puts of different keys: both succeed
+- two concurrent `If-Match` puts of one etag: 1 winner
+
+The patron enrollment and reset races were exercised through the worker's fetch handler against an in-memory bucket that implements those same conditional rules, including a bucket whose reads return stale values. That suite is not itself running inside workerd.
 
 ## Release check
 

@@ -382,7 +382,8 @@ async function resetPatron(env, id) {
     ...p,
     hash,
     resetAt: new Date(nowMs(env)).toISOString(),
-    recoveryGen: (p.recoveryGen || 0) + 1,
+    recoveryGen: (Number.isInteger(p.recoveryGen) ? p.recoveryGen : 0) + 1,
+    sessionGen: (Number.isInteger(p.sessionGen) ? p.sessionGen : 0) + 1,
   }));
   if (!wrote || !wrote.changed) return null;
   await deleteRecoveryTokens(env, id);
@@ -390,16 +391,31 @@ async function resetPatron(env, id) {
   return { patron: { id: wrote.patron.id, handle: wrote.patron.handle }, passcode };
 }
 function recoveryApi() {
-  return { json, normHandle, normPass, hashPasscode, getPatron, killPatronSessions, rateLimited, rateLimitedKey, checkPatron, handleKey };
+  return { json, normHandle, normPass, hashPassword, hashPasscode, timingEq, getPatron, killPatronSessions, checkPatron, handleKey };
 }
 async function hmacSign(env, payload) {
   const key = await crypto.subtle.importKey("raw", unb64(env.SESSION_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return b64(await crypto.subtle.sign("HMAC", key, enc.encode(payload)));
 }
+async function sessionCurrent(env, patron, sid) {
+  const sess = await env.BUCKET.head(`patrons/sess/${patron.id}/${sid}`);
+  if (!sess) return false;
+  const raw = sess.customMetadata && sess.customMetadata.sessionGen;
+  const stamped = raw == null || raw === "" ? 0 : Number(raw);
+  const current = Number.isInteger(patron.sessionGen) ? patron.sessionGen : 0;
+  return Number.isInteger(stamped) && stamped === current;
+}
 async function makePatronToken(env, p) {
+  const fresh = await getPatron(env, p.id);
+  const seenGen = Number.isInteger(p.sessionGen) ? p.sessionGen : 0;
+  const freshGen = fresh && Number.isInteger(fresh.sessionGen) ? fresh.sessionGen : 0;
+  if (!fresh || fresh.hash !== p.hash || freshGen !== seenGen) return null;
+  if (typeof env.BARRIER === "function") await env.BARRIER("login:before-session");
   const sid = uid();
   const exp = Date.now() + PATRON_SESSION_DAYS * 86400 * 1000;
-  await env.BUCKET.put(`patrons/sess/${p.id}/${sid}`, "1", { customMetadata: { exp: String(exp) } });
+  await env.BUCKET.put(`patrons/sess/${p.id}/${sid}`, String(seenGen), {
+    customMetadata: { exp: String(exp), sessionGen: String(seenGen) },
+  });
   const payload = `patron|${p.id}|${sid}|${exp}`; // "patron|" prefix: can never pass the admin "admin|" check
   return btoa(payload) + "." + (await hmacSign(env, payload));
 }
@@ -414,7 +430,7 @@ async function checkPatron(env, req) {
   if (kind !== "patron" || !/^[0-9a-f]{32}$/.test(sid || "") || !(Date.now() < parseInt(exp, 10))) return null;
   const p = await getPatron(env, id);
   if (!p) return null;
-  if (!(await env.BUCKET.head(`patrons/sess/${p.id}/${sid}`))) return null;
+  if (!(await sessionCurrent(env, p, sid))) return null;
   return { patron: p, sid };
 }
 function patronCors(env, req) {
@@ -452,7 +468,9 @@ async function patronLogin(req, env, c) {
   const got = await hashPassword(pass, parts[2], parseInt(parts[1], 10));
   const ok = !!p && pass.length > 0 && timingEq(got, parts[3]);
   if (!ok) return json(generic, 401, c);
-  return json({ ok: true, token: await makePatronToken(env, p), handle: p.handle }, 200, c);
+  const token = await makePatronToken(env, p);
+  if (!token) return json(generic, 401, c);
+  return json({ ok: true, token, handle: p.handle }, 200, c);
 }
 async function purgePatronSessions(env) {
   const now = Date.now();
@@ -652,7 +670,7 @@ async function servePatronMedia(req, env, url, id) {
   if (!timingEq(await mediaSig(env, id, pid, sid, exp), sig)) return resp("forbidden", 403);
   if (!(Date.now() < parseInt(exp, 10))) return resp("link expired", 403);
   const p = await getPatron(env, pid);
-  if (!p || !(await env.BUCKET.head(`patrons/sess/${pid}/${sid}`))) return resp("forbidden", 403);
+  if (!p || !(await sessionCurrent(env, p, sid))) return resp("forbidden", 403);
   const meta = await getJson(env, vaultMetaKey(id));
   if (!meta) return resp("not found", 404);
   return serveVaultObject(req, env, meta);

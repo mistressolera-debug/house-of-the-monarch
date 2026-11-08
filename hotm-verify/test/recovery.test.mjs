@@ -219,11 +219,11 @@ async function login(env, handle, passcode, ip = "203.0.113.20") {
   return res.json.token;
 }
 
-async function enroll(env, bearer, email, ip = "203.0.113.30") {
+async function enroll(env, bearer, email, passcode, ip = "203.0.113.30") {
   const before = env.sink.length;
   const res = await call(env, "/patron/recovery/email", {
     headers: { Authorization: "Bearer " + bearer },
-    body: { email, deliverTo: "other@example.net", to: "other@example.net" },
+    body: { email, passcode, deliverTo: "other@example.net", to: "other@example.net" },
     ip,
   });
   assert.equal(res.status, 200, res.text);
@@ -241,7 +241,7 @@ async function confirm(env, token, ip = "203.0.113.31") {
 async function verified(env, handle, email) {
   const created = await createPatron(env, handle);
   const bearer = await login(env, handle, created.passcode);
-  const token = await enroll(env, bearer, email);
+  const token = await enroll(env, bearer, email, created.passcode);
   const done = await confirm(env, token);
   assert.equal(done.status, 200, done.text);
   env.sink.length = 0;
@@ -407,7 +407,8 @@ test("reset updates the court key, revokes sessions and old links, and keeps app
   const patron = await patronRecord(env, "Cedar_Reset");
   assert.equal(patron.source, "added manually");
   assert.equal(patron.verifiedEmail, "reset@example.com");
-  assert.equal(patron.recoveryGen, 2);
+  assert.equal(patron.recoveryGen, 3);
+  assert.equal(patron.sessionGen, 1);
   const sessions = await env.BUCKET.list({ prefix: `patrons/sess/${patron.id}/` });
   assert.equal(sessions.objects.length, 1);
 });
@@ -458,7 +459,7 @@ test("an enrollment token cannot reset a court key, and a reset token cannot ver
   const account = await verified(env, "Cedar_Purpose", "purpose@example.com");
   const bearer = await login(env, "Cedar_Purpose", account.passcode, "203.0.113.24");
   env.sink.length = 0;
-  const emailToken = await enroll(env, bearer, "next@example.com", "203.0.113.32");
+  const emailToken = await enroll(env, bearer, "next@example.com", account.passcode, "203.0.113.32");
   const asReset = await call(env, "/patron/recovery/complete", { body: { token: emailToken, passcode: KEY_A }, ip: "203.0.113.120" });
   assert.equal(asReset.status, 400);
   const confirmed = await confirm(env, emailToken, "203.0.113.33");
@@ -483,7 +484,7 @@ test("confirming a new address retires an outstanding reset link", async () => {
   await requestReset(env, "Cedar_Rotate", {}, "203.0.113.130");
   const oldLink = linkToken(env.sink[0].text, "reset");
   const bearer = await login(env, "Cedar_Rotate", account.passcode, "203.0.113.26");
-  const emailToken = await enroll(env, bearer, "second@example.com", "203.0.113.35");
+  const emailToken = await enroll(env, bearer, "second@example.com", account.passcode, "203.0.113.35");
   assert.equal((await confirm(env, emailToken, "203.0.113.36")).status, 200);
   const retired = await call(env, "/patron/recovery/complete", { body: { token: oldLink, passcode: KEY_A }, ip: "203.0.113.131" });
   assert.equal(retired.status, 400);
@@ -589,7 +590,240 @@ test("enrollment requires a patron session and does not grant the Vault", async 
     ip: "203.0.113.191",
   });
   assert.equal(bad.status, 400);
-  const token = await enroll(env, bearer, "enroll@example.com", "203.0.113.37");
+  const token = await enroll(env, bearer, "enroll@example.com", created.passcode, "203.0.113.37");
   const vault = await call(env, "/patron/vault", { method: "GET", headers: { Authorization: "Bearer " + token } });
   assert.notEqual(vault.status, 200);
+  const wrongKey = await call(env, "/patron/recovery/email", {
+    headers: { Authorization: "Bearer " + bearer },
+    body: { email: "other@example.com", passcode: "not-the-court-key" },
+    ip: "203.0.113.192",
+  });
+  assert.equal(wrongKey.status, 401);
+  assert.equal(env.sink.length, 1);
+  const foreign = await call(env, "/patron/recovery/email", {
+    origin: "https://evil.example",
+    headers: { Authorization: "Bearer " + bearer },
+    body: { email: "other@example.com", passcode: created.passcode },
+    ip: "203.0.113.193",
+  });
+  assert.equal(foreign.status, 403);
+  assert.equal(env.sink.length, 1);
+});
+
+test("two reset links for one account produce one new court key", async () => {
+  const env = makeEnv();
+  await verified(env, "Cedar_Links", "links@example.com");
+  await requestReset(env, "Cedar_Links", {}, "203.0.113.220");
+  await requestReset(env, "Cedar_Links", {}, "203.0.113.221");
+  const first = linkToken(env.sink[0].text, "reset");
+  const second = linkToken(env.sink[1].text, "reset");
+  assert.notEqual(first, second);
+  const [a, b] = await Promise.all([
+    call(env, "/patron/recovery/complete", { body: { token: first, passcode: KEY_A }, ip: "203.0.113.222" }),
+    call(env, "/patron/recovery/complete", { body: { token: second, passcode: KEY_B }, ip: "203.0.113.223" }),
+  ]);
+  assert.equal([a, b].filter((res) => res.status === 200).length, 1);
+  assert.equal([a, b].filter((res) => res.status === 400).length, 1);
+  const loginA = await call(env, "/patron/login", { body: { handle: "Cedar_Links", passcode: KEY_A }, ip: "203.0.113.224" });
+  const loginB = await call(env, "/patron/login", { body: { handle: "Cedar_Links", passcode: KEY_B }, ip: "203.0.113.225" });
+  assert.equal([loginA.status, loginB.status].filter((status) => status === 200).length, 1);
+});
+
+test("a loaded email confirmation cannot replace the address after a reset", async () => {
+  const env = makeEnv();
+  const account = await verified(env, "Cedar_Stale", "stale@example.com");
+  const bearer = await login(env, "Cedar_Stale", account.passcode, "203.0.113.230");
+  const token = await enroll(env, bearer, "later@example.com", account.passcode, "203.0.113.231");
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  let arrived;
+  const arrivedP = new Promise((resolve) => { arrived = resolve; });
+  env.BARRIER = async (name) => {
+    if (name !== "confirm:loaded") return;
+    arrived();
+    await gate;
+  };
+  const pending = confirm(env, token, "203.0.113.232");
+  await arrivedP;
+  const before = await patronRecord(env, "Cedar_Stale");
+  const reset = await call(env, `/admin/api/patrons/${before.id}/reset`, {
+    origin: WORKER,
+    headers: { Cookie: env.adminCookie, "X-HOTM-Admin": "1" },
+    body: {},
+    ip: "203.0.113.233",
+  });
+  assert.equal(reset.status, 200, reset.text);
+  release();
+  const done = await pending;
+  assert.equal(done.status, 400);
+  assert.equal(done.text.includes(token), false);
+  assert.equal(done.text.includes("later@example.com"), false);
+  const after = await patronRecord(env, "Cedar_Stale");
+  assert.equal(after.verifiedEmail, "stale@example.com");
+  assert.notEqual(after.hash, before.hash);
+});
+
+test("a loaded confirmation loses to a newer enrollment", async () => {
+  const env = makeEnv();
+  const created = await createPatron(env, "Cedar_Newer");
+  const bearer = await login(env, "Cedar_Newer", created.passcode, "203.0.113.240");
+  const older = await enroll(env, bearer, "older@example.com", created.passcode, "203.0.113.241");
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  let arrived;
+  const arrivedP = new Promise((resolve) => { arrived = resolve; });
+  env.BARRIER = async (name) => {
+    if (name !== "confirm:loaded") return;
+    arrived();
+    await gate;
+  };
+  const pending = confirm(env, older, "203.0.113.242");
+  await arrivedP;
+  const newer = await enroll(env, bearer, "newer@example.com", created.passcode, "203.0.113.243");
+  release();
+  const lost = await pending;
+  assert.equal(lost.status, 400);
+  env.BARRIER = null;
+  const won = await confirm(env, newer, "203.0.113.244");
+  assert.equal(won.status, 200, won.text);
+  const patron = await patronRecord(env, "Cedar_Newer");
+  assert.equal(patron.verifiedEmail, "newer@example.com");
+  const vault = await call(env, "/patron/vault", { method: "GET", headers: { Authorization: "Bearer " + bearer } });
+  assert.equal(vault.status, 200);
+});
+
+test("a court key accepted before reset cannot open a usable session", async () => {
+  const env = makeEnv();
+  const account = await verified(env, "Cedar_Session", "session@example.com");
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  let arrived;
+  const arrivedP = new Promise((resolve) => { arrived = resolve; });
+  env.BARRIER = async (name) => {
+    if (name !== "login:before-session") return;
+    arrived();
+    await gate;
+  };
+  const loginP = call(env, "/patron/login", {
+    body: { handle: "Cedar_Session", passcode: account.passcode },
+    ip: "203.0.113.250",
+  });
+  await arrivedP;
+  await requestReset(env, "Cedar_Session", {}, "203.0.113.251");
+  const resetToken = linkToken(env.sink.at(-1).text, "reset");
+  const reset = await call(env, "/patron/recovery/complete", {
+    body: { token: resetToken, passcode: KEY_A },
+    ip: "203.0.113.252",
+  });
+  assert.equal(reset.status, 200, reset.text);
+  release();
+  const stale = await loginP;
+  assert.equal(stale.status, 200, stale.text);
+  const vault = await call(env, "/patron/vault", {
+    method: "GET",
+    headers: { Authorization: "Bearer " + stale.json.token },
+  });
+  assert.equal(vault.status, 401);
+  const hijack = await call(env, "/patron/recovery/email", {
+    headers: { Authorization: "Bearer " + stale.json.token },
+    body: { email: "hijack@example.com", passcode: account.passcode },
+    ip: "203.0.113.253",
+  });
+  assert.equal(hijack.status, 401);
+  assert.equal(env.sink.filter((msg) => msg.to === "hijack@example.com").length, 0);
+  env.BARRIER = null;
+  const bearer = await login(env, "Cedar_Session", KEY_A, "203.0.113.254");
+  const enrolled = await enroll(env, bearer, "fresh@example.com", KEY_A, "203.0.113.255");
+  env.BARRIER = null;
+  assert.equal((await confirm(env, enrolled, "203.0.113.249")).status, 200);
+  const patron = await patronRecord(env, "Cedar_Session");
+  assert.equal(patron.verifiedEmail, "fresh@example.com");
+});
+
+test("malformed recovery bodies do not 500 or echo a token", async () => {
+  const env = makeEnv();
+  const shapes = [null, [], "string", 4, { token: null }, { token: ["secret-token"] }, { token: { raw: "secret-token" } }, { handle: null }];
+  for (const body of shapes) {
+    const requested = await call(env, "/patron/recovery/request", { body, ip: "203.0.113.60" });
+    const completed = await call(env, "/patron/recovery/complete", { body, ip: "203.0.113.61" });
+    assert.notEqual(requested.status, 500, requested.text);
+    assert.notEqual(completed.status, 500, completed.text);
+    assert.equal(requested.text.includes("secret-token"), false);
+    assert.equal(completed.text.includes("secret-token"), false);
+    assert.equal(env.logs.some((line) => line.includes("secret-token")), false);
+  }
+});
+
+test("recovery attempts stay capped when reads are stale", async () => {
+  const env = makeEnv();
+  const bucket = new MemoryBucket();
+  const innerGet = bucket.get.bind(bucket);
+  bucket.get = async (key) => {
+    const view = await innerGet(key);
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    return view;
+  };
+  env.BUCKET = bucket;
+  const results = await Promise.all(
+    Array.from({ length: 8 }, (_, i) => requestReset(env, "Nobody_Race", {}, "203.0.113.77")),
+  );
+  const allowed = results.filter((res) => res.status === 200);
+  const blocked = results.filter((res) => res.status === 429);
+  assert.equal(allowed.length, 5);
+  assert.equal(blocked.length, 3);
+  assert.equal(env.sink.length, 0);
+  assert.ok(results.every((res) => res.text === allowed[0].text || res.text === blocked[0].text));
+});
+
+test("workerd R2 binding gives one winner for the same key", async (t) => {
+  let Miniflare;
+  try {
+    ({ Miniflare } = await import("miniflare"));
+  } catch {
+    t.skip("miniflare is not installed in this package");
+    return;
+  }
+  const mf = new Miniflare({
+    modules: true,
+    script: `
+      export default {
+        async fetch(request, env) {
+          const path = new URL(request.url).pathname;
+          if (path === "/once") {
+            const [a, b] = await Promise.all([
+              env.BUCKET.put("once", "a", { onlyIf: new Headers({ "If-None-Match": "*" }) }),
+              env.BUCKET.put("once", "b", { onlyIf: new Headers({ "If-None-Match": "*" }) }),
+            ]);
+            return Response.json({ wins: [a, b].filter(Boolean).length });
+          }
+          if (path === "/keys") {
+            const [a, b] = await Promise.all([
+              env.BUCKET.put("token-a", "a", { onlyIf: new Headers({ "If-None-Match": "*" }) }),
+              env.BUCKET.put("token-b", "b", { onlyIf: new Headers({ "If-None-Match": "*" }) }),
+            ]);
+            return Response.json({ a: Boolean(a), b: Boolean(b) });
+          }
+          await env.BUCKET.put("acct", "0");
+          const current = await env.BUCKET.get("acct");
+          const etag = current.httpEtag || current.etag;
+          const [a, b] = await Promise.all([
+            env.BUCKET.put("acct", "1", { onlyIf: new Headers({ "If-Match": String(etag) }) }),
+            env.BUCKET.put("acct", "2", { onlyIf: new Headers({ "If-Match": String(etag) }) }),
+          ]);
+          return Response.json({ wins: [a, b].filter(Boolean).length });
+        }
+      }
+    `,
+    r2Buckets: ["BUCKET"],
+  });
+  try {
+    const once = await (await mf.dispatchFetch("http://example.com/once")).json();
+    const keys = await (await mf.dispatchFetch("http://example.com/keys")).json();
+    const match = await (await mf.dispatchFetch("http://example.com/match")).json();
+    assert.equal(once.wins, 1);
+    assert.equal(keys.a && keys.b, true);
+    assert.equal(match.wins, 1);
+  } finally {
+    await mf.dispose();
+  }
 });

@@ -42,7 +42,7 @@ test("recover form asks for a handle and not an email destination", () => {
   assert.match(script, /\/patron\/recovery\/request/);
   assert.match(script, /JSON\.stringify\(\{\s*token:\s*hotmResetToken,\s*passcode:\s*pass\s*\}\)/);
   assert.doesNotMatch(script, /\/patron\/recovery\/complete\?/);
-  assert.match(script, /JSON\.stringify\(\{\s*email:\s*email\s*\}\)/);
+  assert.match(script, /JSON\.stringify\(\{\s*email:\s*email,\s*passcode:\s*passcode\s*\}\)/);
 });
 
 test("sign-in still posts only handle and passcode to the verify Worker", () => {
@@ -65,7 +65,11 @@ test("application email stays on the ID form and is not described as a retained 
   assert.match(apply, /name="consent"/);
   assert.match(
     page,
-    /We keep only your handle, status \(approved\/rejected\/expired\), and dates\./,
+    /We keep only your handle, status \(approved\/rejected\/expired\), and dates\. The email on this form is not kept as a login or recovery address\./,
+  );
+  assert.match(
+    page,
+    /A recovery email is separate\./,
   );
   assert.doesNotMatch(recover, /name="email"/);
 });

@@ -710,9 +710,11 @@
       <div id="vault-content" class="hidden"></div>
       <form id="patron-recovery-enroll" class="hidden max-w-xl mx-auto p-6 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3" action="#" method="post" onsubmit="event.preventDefault(); enrollRecoveryEmail();">
         <h3 class="font-cinzel text-lg font-bold text-gold-300">Recovery email</h3>
-        <p class="text-xs text-slate-400">Store a verified email for this court key. The confirmation link goes only to the address you enter here. The application email is not used, and this does not change your key.</p>
+        <p class="text-xs text-slate-400">Store a verified email for this court key. The confirmation link goes only to the address you enter here, and that address is kept for reset links. The application email is not used. Enter the current court key again. This does not change the key.</p>
         <label class="block text-xs text-slate-300 font-semibold" for="patron-recovery-email">Email</label>
         <input id="patron-recovery-email" type="email" required maxlength="128" autocomplete="email" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        <label class="block text-xs text-slate-300 font-semibold" for="patron-recovery-pass">Current court key</label>
+        <input id="patron-recovery-pass" type="password" required maxlength="64" autocomplete="current-password" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
         <button id="patron-recovery-submit" type="submit" class="px-5 py-2 rounded-full bg-gold-500 text-slate-950 font-bold text-xs disabled:opacity-60">Send confirmation</button>
         <p id="patron-recovery-status" class="text-xs text-slate-400" aria-live="polite"></p>
       </form>
@@ -730,7 +732,8 @@
         <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-[11px] text-slate-300 space-y-2 leading-relaxed">
           <p class="font-semibold text-amber-200 uppercase tracking-wider text-[10px]">Consent &amp; privacy notice</p>
           <p>We collect your chosen handle, name, email, a photo of your government ID, and a selfie. These are used only to verify you are 18+ before granting retainer access.</p>
-          <p>Files are encrypted and stored privately for review by the site operator. After you are approved or rejected, ID and selfie images are deleted immediately. Pending applications that are not reviewed are deleted after 30 days. We keep only your handle, status (approved/rejected/expired), and dates.</p>
+          <p>Files are encrypted and stored privately for review by the site operator. After you are approved or rejected, ID and selfie images are deleted immediately. Pending applications that are not reviewed are deleted after 30 days. We keep only your handle, status (approved/rejected/expired), and dates. The email on this form is not kept as a login or recovery address.</p>
+          <p>A recovery email is separate. It is stored only after you add it while signed in to the Vault and confirm the link. That verified address is kept on the patron account so a court-key reset can be sent there, and it is removed when the patron account is removed.</p>
           <p>Questions: <span class="text-gold-300">mistresssolena@monarchofthemoon.shop</span></p>
         </div>
 
@@ -1281,6 +1284,7 @@
       var btn = document.getElementById("patron-recovery-submit");
       var status = document.getElementById("patron-recovery-status");
       var email = document.getElementById("patron-recovery-email").value.trim();
+      var passcode = document.getElementById("patron-recovery-pass").value;
       var token = localStorage.getItem(PATRON_TOKEN);
       status.textContent = "";
       if (!token) { status.textContent = "Sign in before storing a recovery email."; return; }
@@ -1289,9 +1293,10 @@
         var res = await fetch(VERIFY_API + "/patron/recovery/email", {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-          body: JSON.stringify({ email: email })
+          body: JSON.stringify({ email: email, passcode: passcode })
         });
-        if (res.status === 401) status.textContent = "Sign in again before storing a recovery email.";
+        document.getElementById("patron-recovery-pass").value = "";
+        if (res.status === 401) status.textContent = "Sign in again and enter the current court key before storing a recovery email.";
         else if (res.status === 400) status.textContent = "Enter a single email address.";
         else status.textContent = "If the gate accepts that address, a confirmation link is on its way. Delivery waits on the house mail configuration.";
       } catch (err) {

@@ -144,14 +144,74 @@ async function sendOne(env, message) {
   await env.MAIL.send({ to: message.to, subject: message.subject, text: message.text });
 }
 
+function generation(value) {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 ? n : 0;
+}
+
+function asRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value;
+}
+
+function textField(record, key) {
+  const value = record && record[key];
+  return typeof value === "string" ? value : "";
+}
+
+async function pause(env, name) {
+  if (typeof env.BARRIER === "function") await env.BARRIER(name);
+}
+
+async function courtKeyMatches(api, patron, passcode) {
+  const pass = api.normPass(passcode);
+  if (!pass) return false;
+  const parts = String(patron && patron.hash || "").split("$");
+  if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
+  const iters = parseInt(parts[1], 10);
+  if (!iters) return false;
+  const got = await api.hashPassword(pass, parts[2], iters);
+  return api.timingEq(got, parts[3]);
+}
+
+// Conditional increment. Losing writers retry. Exhausting the retries fails closed.
+// The shared login/apply counters are still read-modify-write and are not used here.
+async function limited(env, kind, material, limit) {
+  const windowMs = 3600 * 1000;
+  const bucket = Math.floor(nowMs(env) / windowMs);
+  const h = hex(await crypto.subtle.digest("SHA-256", enc.encode(String(material) + "|" + (env.SESSION_KEY || "")))).slice(0, 32);
+  const key = `rl/${kind}/${bucket}/${h}`;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const obj = await env.BUCKET.get(key);
+    const n = obj ? parseInt(await obj.text(), 10) || 0 : 0;
+    if (n >= limit) return true;
+    const etag = obj && (obj.httpEtag || obj.etag);
+    const onlyIf = etag
+      ? new Headers({ "If-Match": String(etag) })
+      : new Headers({ "If-None-Match": "*" });
+    const wrote = await env.BUCKET.put(key, String(n + 1), {
+      onlyIf,
+      customMetadata: { expires: String(nowMs(env) + windowMs) },
+    });
+    if (wrote) return false;
+  }
+  return true;
+}
+
+function clientIp(req) {
+  return req.headers.get("CF-Connecting-IP") || "unknown";
+}
+
 export async function recoveryRequest(req, env, c, api) {
   let body;
   try { body = await req.json(); } catch { return api.json({ error: "bad request" }, 400, c); }
-  const handle = api.normHandle(body && body.handle);
-  if (await api.rateLimited(env, req, "recover-ip", RECOVER_IP_LIMIT)) {
+  const record = asRecord(body);
+  if (!record) return api.json({ error: "bad request" }, 400, c);
+  const handle = api.normHandle(textField(record, "handle"));
+  if (await limited(env, "recover-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  if (handle && await api.rateLimitedKey(env, "recover-handle", handle.toLowerCase(), RECOVER_HANDLE_LIMIT)) {
+  if (handle && await limited(env, "recover-handle", handle.toLowerCase(), RECOVER_HANDLE_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
   if (handle && mailReady(env)) {
@@ -163,7 +223,7 @@ export async function recoveryRequest(req, env, c, api) {
       const { token, hash } = await storeToken(env, {
         purpose: "password-reset",
         accountId: patron.id,
-        generation: patron.recoveryGen || 0,
+        generation: generation(patron.recoveryGen),
         expiresAt: nowMs(env) + RECOVERY_TTL_MS,
       });
       const link = recoveryLink(env, "reset", token);
@@ -189,23 +249,33 @@ export async function recoveryRequest(req, env, c, api) {
 export async function recoveryComplete(req, env, c, api) {
   let body;
   try { body = await req.json(); } catch { return api.json({ error: "bad request" }, 400, c); }
-  if (await api.rateLimited(env, req, "recover-complete-ip", RECOVER_IP_LIMIT)) {
+  if (await limited(env, "recover-complete-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  const rec = await loadToken(env, body && body.token);
-  if (!rec || rec.purpose !== "password-reset" || !isAccount(rec.accountId)) return api.json(INVALID_LINK, 400, c);
+  const record = asRecord(body);
+  const rec = await loadToken(env, textField(record, "token"));
+  if (!rec || rec.purpose !== "password-reset" || !isAccount(rec.accountId) || !Number.isInteger(Number(rec.generation))) {
+    return api.json(INVALID_LINK, 400, c);
+  }
+  await pause(env, "complete:loaded");
   if (!(nowMs(env) < Number(rec.expiresAt))) return api.json(INVALID_LINK, 400, c);
-  const pass = api.normPass(body && body.passcode);
-  if (pass.length < PASSCODE_MIN) {
+  const passcode = textField(record, "passcode");
+  if (api.normPass(passcode).length < PASSCODE_MIN) {
     return api.json({ error: "Court key must be at least 20 letters or numbers." }, 400, c);
   }
   const now = nowMs(env);
   if (!(await claimToken(env, rec.hash, now))) return api.json(INVALID_LINK, 400, c);
-  const hash = await api.hashPasscode(body.passcode);
+  const hash = await api.hashPasscode(passcode);
   const when = new Date(now).toISOString();
   const wrote = await casPatron(env, rec.accountId, (p) => {
-    if ((p.recoveryGen || 0) !== (Number(rec.generation) || 0)) return null;
-    return { ...p, hash, resetAt: when, recoveryGen: (p.recoveryGen || 0) + 1 };
+    if (generation(p.recoveryGen) !== Number(rec.generation)) return null;
+    return {
+      ...p,
+      hash,
+      resetAt: when,
+      recoveryGen: generation(p.recoveryGen) + 1,
+      sessionGen: generation(p.sessionGen) + 1,
+    };
   });
   if (!wrote || !wrote.changed) return api.json(INVALID_LINK, 400, c);
   await deleteRecoveryTokens(env, rec.accountId);
@@ -218,16 +288,28 @@ export async function recoveryEnroll(req, env, c, api) {
   if (!session) return api.json({ error: "unauthorized" }, 401, c);
   let body;
   try { body = await req.json(); } catch { return api.json({ error: "bad request" }, 400, c); }
-  if (await api.rateLimited(env, req, "recover-enroll-ip", RECOVER_IP_LIMIT)) {
+  const record = asRecord(body);
+  if (!record) return api.json({ error: "bad request" }, 400, c);
+  if (await limited(env, "recover-enroll-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  const email = safeMailbox(body && body.email);
+  const email = safeMailbox(textField(record, "email"));
   if (!email) return api.json({ error: "bad email" }, 400, c);
+  if (!(await courtKeyMatches(api, session.patron, textField(record, "passcode")))) {
+    return api.json({ error: "unauthorized" }, 401, c);
+  }
   if (mailReady(env)) {
+    const bumped = await casPatron(env, session.patron.id, (p) => {
+      if (p.hash !== session.patron.hash || generation(p.sessionGen) !== generation(session.patron.sessionGen)) return null;
+      return { ...p, recoveryGen: generation(p.recoveryGen) + 1 };
+    });
+    if (!bumped || !bumped.changed) return api.json({ error: "unauthorized" }, 401, c);
+    await deleteRecoveryTokens(env, session.patron.id);
     const { token, hash } = await storeToken(env, {
       purpose: "email-verify",
       accountId: session.patron.id,
       email,
+      generation: generation(bumped.patron.recoveryGen),
       expiresAt: nowMs(env) + RECOVERY_TTL_MS,
     });
     const link = recoveryLink(env, "email", token);
@@ -252,22 +334,29 @@ export async function recoveryEnroll(req, env, c, api) {
 export async function recoveryConfirmEmail(req, env, c, api) {
   let body;
   try { body = await req.json(); } catch { return api.json({ error: "bad request" }, 400, c); }
-  if (await api.rateLimited(env, req, "recover-confirm-ip", RECOVER_IP_LIMIT)) {
+  if (await limited(env, "recover-confirm-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  const rec = await loadToken(env, body && body.token);
-  if (!rec || rec.purpose !== "email-verify" || !isAccount(rec.accountId)) return api.json(INVALID_LINK, 400, c);
+  const record = asRecord(body);
+  const rec = await loadToken(env, textField(record, "token"));
+  if (!rec || rec.purpose !== "email-verify" || !isAccount(rec.accountId) || !Number.isInteger(Number(rec.generation))) {
+    return api.json(INVALID_LINK, 400, c);
+  }
   const email = safeMailbox(rec.email);
   if (!email) return api.json(INVALID_LINK, 400, c);
+  await pause(env, "confirm:loaded");
   if (!(nowMs(env) < Number(rec.expiresAt))) return api.json(INVALID_LINK, 400, c);
   if (!(await claimToken(env, rec.hash, nowMs(env)))) return api.json(INVALID_LINK, 400, c);
   const when = new Date(nowMs(env)).toISOString();
-  const wrote = await casPatron(env, rec.accountId, (p) => ({
-    ...p,
-    verifiedEmail: email,
-    emailVerifiedAt: when,
-    recoveryGen: (p.recoveryGen || 0) + 1,
-  }));
+  const wrote = await casPatron(env, rec.accountId, (p) => {
+    if (generation(p.recoveryGen) !== Number(rec.generation)) return null;
+    return {
+      ...p,
+      verifiedEmail: email,
+      emailVerifiedAt: when,
+      recoveryGen: generation(p.recoveryGen) + 1,
+    };
+  });
   if (!wrote || !wrote.changed) return api.json(INVALID_LINK, 400, c);
   await deleteRecoveryTokens(env, rec.accountId);
   return api.json({ ok: true }, 200, c);
