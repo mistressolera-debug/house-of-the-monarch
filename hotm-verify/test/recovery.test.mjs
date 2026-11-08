@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes, webcrypto } from "node:crypto";
 import { test } from "node:test";
 import worker, { PASSCODE_MIN, RECOVERY_TTL_MS } from "../src/index.js";
+import { scriptedSmtp } from "./scripted-smtp.mjs";
 
 const SITE = "https://houseofthemonarch.com";
 const WORKER = "https://hotm-verify.mistressolera.workers.dev";
@@ -826,4 +827,38 @@ test("workerd R2 binding gives one winner for the same key", async (t) => {
   } finally {
     await mf.dispose();
   }
+});
+
+test("a configured Workspace SMTP socket mails only the verified patron", async () => {
+  const env = makeEnv();
+  await verified(env, "Cedar_Smtp", "smtp-patron@example.com");
+  env.MAIL = undefined;
+  env.SMTP_APP_PASSWORD = "abcdefghijklmnop";
+  const server = scriptedSmtp();
+  env.SMTP_CONNECT = (address, options) => server.connect(address, options);
+  const res = await requestReset(env, "Cedar_Smtp", {
+    email: "other@example.net",
+    to: "monarchofthemoonshop@gmail.com",
+  }, "203.0.113.90");
+  assert.equal(res.status, 200);
+  assert.equal(res.text, '{"ok":true}');
+  assert.equal(server.calls.length, 1);
+  assert.equal(server.calls[0].options.secureTransport, "on");
+  assert.equal(server.calls[0].address.port, 465);
+  assert.deepEqual(
+    server.sent.filter((line) => line.startsWith("RCPT TO:")),
+    ["RCPT TO:<smtp-patron@example.com>"],
+  );
+  assert.equal(server.sent.join("\n").includes("monarchofthemoonshop@gmail.com"), false);
+  assert.equal(server.sent.join("\n").includes("other@example.net"), false);
+  assert.equal(res.text.includes("abcdefghijklmnop"), false);
+  assert.equal(env.logs.some((line) => line.includes("abcdefghijklmnop") || line.includes("court-key-reset")), false);
+  const before = await env.BUCKET.list({ prefix: "patrons/recovery/" });
+  const failed = scriptedSmtp({ failAuth: true });
+  env.SMTP_CONNECT = (address, options) => failed.connect(address, options);
+  const again = await requestReset(env, "Cedar_Smtp", {}, "203.0.113.91");
+  assert.equal(again.text, '{"ok":true}');
+  assert.equal(again.text.includes("smtp 535"), false);
+  const after = await env.BUCKET.list({ prefix: "patrons/recovery/" });
+  assert.equal(after.objects.length, before.objects.length);
 });

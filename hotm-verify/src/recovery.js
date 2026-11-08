@@ -1,8 +1,11 @@
 // Patron court-key recovery. Tokens are stored only as SHA-256 hashes.
 // Single-use is an R2 conditional put (If-None-Match: *), which R2 commits atomically.
 // A read followed by a delete is not used and is not atomic.
-// Mail is sent only through env.MAIL.send, and only to a verified address already
-// stored on the patron record. Application emails are never read here.
+// Mail goes to env.MAIL.send when a test double is installed. Otherwise it uses
+// the Workspace SMTP adapter, which sends only as sj@monarchofthemoon.shop.
+// Application emails are never read here.
+
+import { sendWorkspaceMail, workspaceSmtpReady } from "./smtp-mail.js";
 
 export const RECOVERY_TTL_MS = 15 * 60 * 1000;
 export const PASSCODE_MIN = 20;
@@ -32,7 +35,9 @@ export function publicSiteOrigin(env) {
 }
 
 function mailReady(env) {
-  return typeof env.MAIL?.send === "function" && !!publicSiteOrigin(env);
+  if (!publicSiteOrigin(env)) return false;
+  if (typeof env.MAIL?.send === "function") return true;
+  return workspaceSmtpReady(env);
 }
 
 export function safeMailbox(value) {
@@ -141,7 +146,12 @@ async function discardToken(env, accountId, hash) {
 }
 
 async function sendOne(env, message) {
-  await env.MAIL.send({ to: message.to, subject: message.subject, text: message.text });
+  const payload = { to: message.to, subject: message.subject, text: message.text };
+  if (typeof env.MAIL?.send === "function") {
+    await env.MAIL.send(payload);
+    return;
+  }
+  await sendWorkspaceMail(env, payload);
 }
 
 function generation(value) {
