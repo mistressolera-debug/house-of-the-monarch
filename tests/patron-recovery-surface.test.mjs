@@ -20,7 +20,7 @@ function sliceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
-const recover = sliceBetween(page, 'id="vip-form-recover"', "</div>");
+const recover = sliceBetween(page, 'id="vip-form-recover"', "</form>");
 const login = sliceBetween(page, 'id="vip-form-login"', "</form>");
 const apply = sliceBetween(page, 'id="hotm-apply-form"', "</form>");
 const engineAt = page.indexOf("const VERIFY_API");
@@ -30,28 +30,19 @@ const engineEnd = page.indexOf("</script>", engineAt);
 assert.ok(engineStart !== -1 && engineEnd !== -1, "missing engine script");
 const script = page.slice(engineStart, engineEnd);
 
-test("recover panel is closed and collects no destination", () => {
-  assert.match(recover, /data-recovery="closed"/);
-  assert.match(recover, /verified email the house already stores for that account/i);
-  assert.match(recover, /no verified email on file/i);
-  assert.match(recover, /enrolled while signed in/i);
-  assert.doesNotMatch(recover, /<input\b/i);
-  assert.doesNotMatch(recover, /<form\b/i);
-  assert.doesNotMatch(recover, /<button\b/i);
-  assert.doesNotMatch(recover, /type\s*=\s*["']email["']/i);
+test("recover form asks for a handle and not an email destination", () => {
+  assert.match(recover, /data-recovery="handle-only"/);
+  assert.match(recover, /verified email stored for that court key/i);
+  assert.match(recover, /does not take an email address/i);
+  assert.match(recover, /id="vip-recover-handle"/);
+  assert.match(recover, /name="handle"/);
+  assert.doesNotMatch(recover, /type="email"/i);
   assert.doesNotMatch(recover, /applied with/i);
-  assert.doesNotMatch(recover, /request a new one/i);
-  assert.match(recover, /leaves ID approval, Vault access, and the court key unchanged/i);
-});
-
-test("page script does not request or assemble a reset link", () => {
-  assert.doesNotMatch(script, /\/patron\/recover/i);
-  assert.doesNotMatch(script, /\/patron\/recovery/i);
-  assert.doesNotMatch(script, /\/password\/reset/i);
-  assert.doesNotMatch(script, /resetToken|recoveryToken|forgot/i);
-  assert.doesNotMatch(script, /vip-form-recover[\s\S]{0,400}fetch\s*\(/i);
-  assert.match(script, /async function handleVIPLogin\(/);
-  assert.match(script, /function handleVIPApply\(/);
+  assert.match(script, /JSON\.stringify\(\{\s*handle:\s*handle\s*\}\)/);
+  assert.match(script, /\/patron\/recovery\/request/);
+  assert.match(script, /JSON\.stringify\(\{\s*token:\s*hotmResetToken,\s*passcode:\s*pass\s*\}\)/);
+  assert.doesNotMatch(script, /\/patron\/recovery\/complete\?/);
+  assert.match(script, /JSON\.stringify\(\{\s*email:\s*email\s*\}\)/);
 });
 
 test("sign-in still posts only handle and passcode to the verify Worker", () => {

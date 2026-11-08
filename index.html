@@ -708,6 +708,14 @@
         </div>
       </div>
       <div id="vault-content" class="hidden"></div>
+      <form id="patron-recovery-enroll" class="hidden max-w-xl mx-auto p-6 rounded-2xl border border-slate-800 bg-slate-900/60 space-y-3" action="#" method="post" onsubmit="event.preventDefault(); enrollRecoveryEmail();">
+        <h3 class="font-cinzel text-lg font-bold text-gold-300">Recovery email</h3>
+        <p class="text-xs text-slate-400">Store a verified email for this court key. The confirmation link goes only to the address you enter here. The application email is not used, and this does not change your key.</p>
+        <label class="block text-xs text-slate-300 font-semibold" for="patron-recovery-email">Email</label>
+        <input id="patron-recovery-email" type="email" required maxlength="128" autocomplete="email" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        <button id="patron-recovery-submit" type="submit" class="px-5 py-2 rounded-full bg-gold-500 text-slate-950 font-bold text-xs disabled:opacity-60">Send confirmation</button>
+        <p id="patron-recovery-status" class="text-xs text-slate-400" aria-live="polite"></p>
+      </form>
     </section>
 
     <!-- SECTION: AUDIENCE DESK -->
@@ -820,9 +828,32 @@
       </form>
 
       <!-- Tab Content: Recover. Closed until hotm-verify stores a verified email on the account. Do not collect an address here. -->
-      <div id="vip-form-recover" class="hidden space-y-4" data-recovery="closed">
-        <p class="text-xs text-slate-300 leading-relaxed text-center">A court key stays as it is on this page. A reset link goes only to a verified email the house already stores for that account. This gate has no verified email on file. The address is enrolled while signed in, before a link can exist.</p>
-        <p class="text-xs text-slate-400 leading-relaxed text-center">A message to <a href="mailto:mistresssolena@monarchofthemoon.shop" class="text-gold-300 underline">mistresssolena@monarchofthemoon.shop</a> leaves ID approval, Vault access, and the court key unchanged.</p>
+      <form id="vip-form-recover" class="hidden space-y-4" data-recovery="handle-only" action="#" method="post" onsubmit="event.preventDefault(); requestCourtKeyReset();">
+        <p class="text-xs text-slate-300 leading-relaxed text-center">A reset link is sent only to the verified email stored for that court key. This form does not take an email address. Store that address while signed in, from the Vault.</p>
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1" for="vip-recover-handle">Patron Handle / Alias</label>
+          <input id="vip-recover-handle" name="handle" type="text" required maxlength="64" autocomplete="username" placeholder="e.g. Patron_Lord_Vane" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        </div>
+        <p id="vip-recover-status" class="text-xs text-center text-slate-400" aria-live="polite"></p>
+        <button id="vip-recover-submit" type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider hover:brightness-110 disabled:opacity-60">Send reset link</button>
+      </form>
+      <form id="vip-form-reset" class="hidden space-y-4" action="#" method="post" onsubmit="event.preventDefault(); completeCourtKeyReset();">
+        <p class="text-xs text-slate-300 leading-relaxed text-center">Choose a new court key of at least 20 letters or numbers. This does not approve an ID or open the Vault.</p>
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1" for="vip-reset-pass">New court key</label>
+          <input id="vip-reset-pass" type="password" required minlength="20" maxlength="64" autocomplete="new-password" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-300 font-semibold mb-1" for="vip-reset-pass2">Repeat the court key</label>
+          <input id="vip-reset-pass2" type="password" required minlength="20" maxlength="64" autocomplete="new-password" class="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-gold-500">
+        </div>
+        <p id="vip-reset-status" class="text-xs text-center text-slate-400" aria-live="polite"></p>
+        <button id="vip-reset-submit" type="submit" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider disabled:opacity-60">Set new court key</button>
+      </form>
+      <div id="vip-form-email" class="hidden space-y-4">
+        <p class="text-xs text-slate-300 leading-relaxed text-center">Confirm the recovery address for this court key. The link does not change the key or open the Vault.</p>
+        <p id="vip-email-status" class="text-xs text-center text-slate-400" aria-live="polite"></p>
+        <button id="vip-email-submit" type="button" onclick="confirmRecoveryEmail()" class="w-full py-2.5 rounded-full bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider disabled:opacity-60">Confirm recovery email</button>
       </div>
     </div>
   </div>
@@ -985,6 +1016,8 @@
       document.getElementById('vip-form-login').classList.add('hidden');
       document.getElementById('vip-form-apply').classList.add('hidden');
       document.getElementById('vip-form-recover').classList.add('hidden');
+      document.getElementById('vip-form-reset').classList.add('hidden');
+      document.getElementById('vip-form-email').classList.add('hidden');
 
       document.getElementById(`vip-form-${tabName}`).classList.remove('hidden');
 
@@ -1042,6 +1075,8 @@
       document.getElementById('vip-signed-in').classList.add('hidden');
       document.getElementById('vip-signed-in').classList.remove('flex');
       document.getElementById('vip-signin-btn').classList.remove('hidden');
+      const enroll = document.getElementById('patron-recovery-enroll');
+      if (enroll) enroll.classList.add('hidden');
     }
     async function loadVault() {
       const token = localStorage.getItem(PATRON_TOKEN);
@@ -1068,6 +1103,7 @@
         document.getElementById('vip-signed-in').classList.remove('hidden');
         document.getElementById('vip-signed-in').classList.add('flex');
         document.getElementById('vip-signin-btn').classList.add('hidden');
+        document.getElementById('patron-recovery-enroll').classList.remove('hidden');
         lucide.createIcons();
         return true;
       } catch (e) {
@@ -1144,6 +1180,128 @@
       closeVIPModal();
       switchMainTab('audience');
     }
+
+    var hotmResetToken = "";
+    var hotmEmailToken = "";
+    function hotmFragmentToken(name) {
+      var hash = (location.hash || "").replace(/^#/, "");
+      var prefix = name + "=";
+      if (hash.indexOf(prefix) !== 0) return "";
+      var token = hash.slice(prefix.length).split("&")[0];
+      if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return "";
+      history.replaceState(null, "", location.pathname + location.search);
+      return token;
+    }
+    function hotmRecoveryFromHash() {
+      var reset = hotmFragmentToken("court-key-reset");
+      var email = hotmFragmentToken("court-email-verify");
+      if (!reset && !email) return;
+      if (reset) hotmResetToken = reset;
+      if (email) hotmEmailToken = email;
+      openVIPModal();
+      document.getElementById("vip-form-login").classList.add("hidden");
+      document.getElementById("vip-form-apply").classList.add("hidden");
+      document.getElementById("vip-form-recover").classList.add("hidden");
+      document.getElementById("vip-form-reset").classList.toggle("hidden", !reset);
+      document.getElementById("vip-form-email").classList.toggle("hidden", !email);
+    }
+    async function requestCourtKeyReset() {
+      var btn = document.getElementById("vip-recover-submit");
+      var status = document.getElementById("vip-recover-status");
+      var handle = document.getElementById("vip-recover-handle").value.trim();
+      status.textContent = "";
+      btn.disabled = true;
+      try {
+        var res = await fetch(VERIFY_API + "/patron/recovery/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ handle: handle })
+        });
+        if (res.status === 429) status.textContent = "Too many attempts. Try again later.";
+        else status.textContent = "If that court key has a verified email, a reset link is on its way.";
+      } catch (err) {
+        status.textContent = "If that court key has a verified email, a reset link is on its way.";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    async function completeCourtKeyReset() {
+      var btn = document.getElementById("vip-reset-submit");
+      var status = document.getElementById("vip-reset-status");
+      var pass = document.getElementById("vip-reset-pass").value;
+      var again = document.getElementById("vip-reset-pass2").value;
+      status.textContent = "";
+      if (pass !== again) { status.textContent = "Those court keys do not match."; return; }
+      btn.disabled = true;
+      try {
+        var res = await fetch(VERIFY_API + "/patron/recovery/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: hotmResetToken, passcode: pass })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (res.ok) {
+          hotmResetToken = "";
+          document.getElementById("vip-reset-pass").value = "";
+          document.getElementById("vip-reset-pass2").value = "";
+          status.textContent = "The court key is updated. Sign in with it. The Vault stays closed until you do.";
+        } else {
+          status.textContent = data.error || "That link is not valid.";
+        }
+      } catch (err) {
+        status.textContent = "That link is not valid.";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    async function confirmRecoveryEmail() {
+      var btn = document.getElementById("vip-email-submit");
+      var status = document.getElementById("vip-email-status");
+      btn.disabled = true;
+      try {
+        var res = await fetch(VERIFY_API + "/patron/recovery/email/confirm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: hotmEmailToken })
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (res.ok) {
+          hotmEmailToken = "";
+          status.textContent = "That recovery email is stored. It does not change your court key.";
+        } else {
+          status.textContent = data.error || "That link is not valid.";
+        }
+      } catch (err) {
+        status.textContent = "That link is not valid.";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    async function enrollRecoveryEmail() {
+      var btn = document.getElementById("patron-recovery-submit");
+      var status = document.getElementById("patron-recovery-status");
+      var email = document.getElementById("patron-recovery-email").value.trim();
+      var token = localStorage.getItem(PATRON_TOKEN);
+      status.textContent = "";
+      if (!token) { status.textContent = "Sign in before storing a recovery email."; return; }
+      btn.disabled = true;
+      try {
+        var res = await fetch(VERIFY_API + "/patron/recovery/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+          body: JSON.stringify({ email: email })
+        });
+        if (res.status === 401) status.textContent = "Sign in again before storing a recovery email.";
+        else if (res.status === 400) status.textContent = "Enter a single email address.";
+        else status.textContent = "If the gate accepts that address, a confirmation link is on its way. Delivery waits on the house mail configuration.";
+      } catch (err) {
+        status.textContent = "If the gate accepts that address, a confirmation link is on its way. Delivery waits on the house mail configuration.";
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    document.getElementById("ag-enter")?.addEventListener("click", function () { setTimeout(hotmRecoveryFromHash, 0); });
+    if (document.documentElement.classList.contains("ag-ok")) hotmRecoveryFromHash();
 
 
     // Age-verify upload API (Cloudflare Worker). Replace after deploy:

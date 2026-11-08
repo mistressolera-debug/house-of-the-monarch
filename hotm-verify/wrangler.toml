@@ -1,0 +1,26 @@
+name = "hotm-verify"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+workers_dev = true
+account_id = "<CLOUDFLARE_ACCOUNT_ID_REDACTED>"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "hotm-id-uploads"
+
+[vars]
+ALLOWED_ORIGIN = "https://houseofthemonarch.com"
+
+[triggers]
+crons = ["17 3 * * *"]
+
+# Secrets (wrangler secret put): ENC_KEY (base64 32 bytes), ADMIN_PW_HASH (pbkdf2$iter$saltB64$hashB64),
+# TOTP_SECRET (base32), SESSION_KEY (base64 32 bytes)
+#
+# Patron recovery links are built only from ALLOWED_ORIGIN, or from CANONICAL_ORIGIN when that
+# var is set. Both must be a bare https origin (no path, user, or query). The request Host,
+# X-Forwarded-Host, and redirect fields are never used.
+# Mail is fail-closed: nothing is sent unless env.MAIL.send({ to, subject, text }) exists.
+# This file does not name a mail provider, domain, or secret. See RECOVERY.md.
+# Single-use claims use an R2 conditional put (If-None-Match: *). That write is atomic.
+# Do not replace it with a read followed by a delete.
