@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { sendWorkspaceMail, WORKSPACE_SENDER } from "../src/smtp-mail.js";
+import { appPassword, sendWorkspaceMail, WORKSPACE_SENDER } from "../src/smtp-mail.js";
 import { scriptedSmtp } from "./scripted-smtp.mjs";
 
 const PASS = "abcdefghijklmnop";
@@ -43,7 +43,8 @@ test("missing, mismatched, or injected credentials never open a socket", async (
   const cases = [
     { SMTP_APP_PASSWORD: "" },
     { SMTP_APP_PASSWORD: "short" },
-    { SMTP_APP_PASSWORD: "abcd efgh ijkl mnop\r\n" },
+    { SMTP_APP_PASSWORD: "abcd efgh ijkl mno0" },
+    { SMTP_APP_PASSWORD: "abcdefghijklmno\u0000p" },
     { SMTP_APP_PASSWORD: PASS, SMTP_USER: "other@example.com" },
   ];
   for (const extra of cases) {
@@ -97,4 +98,37 @@ test("a silent server times out and closes the socket", async () => {
   );
   assert.equal(closed, true);
   assert.equal(server.calls[0].options.secureTransport, "on");
+});
+
+test("app passwords are accepted after Unicode whitespace and zero-width characters are stripped", () => {
+  const letters = "abcdefghijklmnop";
+  const cases = [
+    "abcd efgh ijkl mnop",
+    "abcd\u00A0efgh\u00A0ijkl\u00A0mnop",
+    "abcd efgh ijkl mnop\n",
+    "abcd efgh ijkl mnop\r\n",
+    "\uFEFF" + "abcd efgh ijkl mnop",
+    "ab\u200Bcd efgh ijkl mnop",
+    "abcdefghijklmno\u200Cp",
+    "\tabcd\tefgh\tijkl\tmnop\t",
+  ];
+  for (const raw of cases) {
+    assert.equal(appPassword({ SMTP_APP_PASSWORD: raw }), letters);
+  }
+  assert.equal(appPassword({ SMTP_APP_PASSWORD: "abcdefghijklmno" }), null);
+  assert.equal(appPassword({ SMTP_APP_PASSWORD: "abcdefghijklmnopq" }), null);
+  assert.equal(appPassword({ SMTP_APP_PASSWORD: "abcd efgh ijkl mno0" }), null);
+  assert.equal(appPassword({ SMTP_APP_PASSWORD: letters + "\u0000" }), null);
+});
+
+test("Reply-To is written only when a valid address is provided", async () => {
+  const server = scriptedSmtp();
+  await sendWorkspaceMail(envWith(server), { ...message, replyTo: "patron@example.com", subject: "House Desk message · Cedar" });
+  const sent = server.sent.filter((line) => !line.startsWith("AUTH PLAIN ")).join("\n");
+  assert.ok(server.sent.includes("Reply-To: <patron@example.com>"));
+  assert.ok(server.sent.includes("Subject: House Desk message · Cedar"));
+  assert.equal(sent.includes("evil@example.com"), false);
+  const bad = scriptedSmtp();
+  await assert.rejects(sendWorkspaceMail(envWith(bad), { ...message, replyTo: "patron@example.com\r\nBcc: evil@example.com" }), /smtp refused/);
+  assert.equal(bad.calls.length, 0);
 });

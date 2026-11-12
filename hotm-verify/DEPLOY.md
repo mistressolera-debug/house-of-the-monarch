@@ -33,7 +33,7 @@ Less-secure username-and-password sign-in for Workspace was removed May 1, 2025.
 
 ## Mailbox owner steps
 
-Do these as `sj@monarchofthemoon.shop`. Do not type the normal Google password into Wrangler, git, or chat.
+Do these as `monarchofthemoonshop@gmail.com`. Do not type the normal Google password into Wrangler, git, or chat.
 
 1. Turn on 2-Step Verification for that mailbox if it is not already on.
 2. Open [app passwords](https://myaccount.google.com/apppasswords) while signed in as that mailbox. Create one for Mail. If the page is missing, a Workspace admin has to allow app passwords for the account. The normal Google password will not work.
@@ -43,7 +43,7 @@ Do these as `sj@monarchofthemoon.shop`. Do not type the normal Google password i
 npx wrangler secret put SMTP_APP_PASSWORD
 ```
 
-Paste the 16-letter app password only. Do not delete `ENC_KEY`, `ADMIN_PW_HASH`, `SESSION_KEY`, or `TOTP_SECRET`. Leave `SMTP_USER` unset. If you set it, it must be `sj@monarchofthemoon.shop` or the Worker will not send.
+Paste the 16-letter app password only. Do not delete `ENC_KEY`, `ADMIN_PW_HASH`, `SESSION_KEY`, or `TOTP_SECRET`. Leave `SMTP_USER` unset. If you set it, it must be `monarchofthemoonshop@gmail.com` or the Worker will not send.
 
 Until that secret exists, recovery requests still return the generic acknowledgement and send nothing.
 

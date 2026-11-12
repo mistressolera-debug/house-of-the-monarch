@@ -1,1 +1,1 @@
-This folder contains the built output assets for the worker "hotm-verify" generated at 2026-11-08T09:09:51.529Z.
+This folder contains the built output assets for the worker "hotm-verify" generated at 2026-11-12T13:30:47.242Z.

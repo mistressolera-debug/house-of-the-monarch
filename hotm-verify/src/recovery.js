@@ -2,7 +2,7 @@
 // Single-use is an R2 conditional put (If-None-Match: *), which R2 commits atomically.
 // A read followed by a delete is not used and is not atomic.
 // Mail goes to env.MAIL.send when a test double is installed. Otherwise it uses
-// the Workspace SMTP adapter, which sends only as sj@monarchofthemoon.shop.
+// the Gmail SMTP adapter, which sends only as monarchofthemoonshop@gmail.com.
 // Application emails are never read here.
 
 import { sendWorkspaceMail, workspaceSmtpReady } from "./smtp-mail.js";
@@ -147,6 +147,7 @@ async function discardToken(env, accountId, hash) {
 
 async function sendOne(env, message) {
   const payload = { to: message.to, subject: message.subject, text: message.text };
+  if (message.replyTo) payload.replyTo = message.replyTo;
   if (typeof env.MAIL?.send === "function") {
     await env.MAIL.send(payload);
     return;

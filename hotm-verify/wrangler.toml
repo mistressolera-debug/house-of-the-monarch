@@ -17,8 +17,8 @@ crons = ["17 3 * * *"]
 # Secrets already on the live worker. Put replacements only; do not delete them:
 #   ENC_KEY, ADMIN_PW_HASH, TOTP_SECRET, SESSION_KEY
 # New secret, still absent until the mailbox owner creates it:
-#   SMTP_APP_PASSWORD  (Google app password for sj@monarchofthemoon.shop, 16 letters)
-# Optional SMTP_USER, if set, must be exactly sj@monarchofthemoon.shop or mail stays closed.
+#   SMTP_APP_PASSWORD  (Google app password for monarchofthemoonshop@gmail.com, 16 letters)
+# Optional SMTP_USER, if set, must be exactly monarchofthemoonshop@gmail.com or mail stays closed.
 # The SMTP host and port are fixed in code (smtp.gmail.com:465, implicit TLS). Do not add a host var.
 #
 # Patron recovery links are built only from ALLOWED_ORIGIN, or from CANONICAL_ORIGIN when that
