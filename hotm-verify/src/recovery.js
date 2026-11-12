@@ -147,6 +147,7 @@ async function discardToken(env, accountId, hash) {
 
 async function sendOne(env, message) {
   const payload = { to: message.to, subject: message.subject, text: message.text };
+  if (message.replyTo) payload.replyTo = message.replyTo;
   if (typeof env.MAIL?.send === "function") {
     await env.MAIL.send(payload);
     return;

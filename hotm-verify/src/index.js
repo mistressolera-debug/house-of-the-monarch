@@ -1,4 +1,5 @@
 // hotm-verify: private ID upload + admin review. Never logs request bodies or file contents.
+import { deskMessage } from "./desk-message.js";
 import {
   casPatron,
   deleteRecoveryTokens,
@@ -1005,6 +1006,7 @@ export default {
           for (const m of await listVault(env)) items.push({ ...publicItem(m), url: await signedMediaUrl(env, url.origin, m.id, s) });
           return json({ ok: true, handle: s.patron.handle, html: VAULT_HTML, items, expiresIn: VAULT_URL_TTL / 1000 }, 200, c);
         }
+        if (path === "/patron/desk-message" && req.method === "POST") return deskMessage(req, env, c, recoveryApi());
         const recoveryRoute = recoveryPaths(path, req.method);
         if (recoveryRoute === "prefetch") return json({ error: "method not allowed" }, 405, c);
         if (recoveryRoute === "request") return recoveryRequest(req, env, c, recoveryApi());

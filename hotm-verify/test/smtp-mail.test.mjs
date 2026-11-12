@@ -120,3 +120,15 @@ test("app passwords are accepted after Unicode whitespace and zero-width charact
   assert.equal(appPassword({ SMTP_APP_PASSWORD: "abcd efgh ijkl mno0" }), null);
   assert.equal(appPassword({ SMTP_APP_PASSWORD: letters + "\u0000" }), null);
 });
+
+test("Reply-To is written only when a valid address is provided", async () => {
+  const server = scriptedSmtp();
+  await sendWorkspaceMail(envWith(server), { ...message, replyTo: "patron@example.com", subject: "House Desk message · Cedar" });
+  const sent = server.sent.filter((line) => !line.startsWith("AUTH PLAIN ")).join("\n");
+  assert.ok(server.sent.includes("Reply-To: <patron@example.com>"));
+  assert.ok(server.sent.includes("Subject: House Desk message · Cedar"));
+  assert.equal(sent.includes("evil@example.com"), false);
+  const bad = scriptedSmtp();
+  await assert.rejects(sendWorkspaceMail(envWith(bad), { ...message, replyTo: "patron@example.com\r\nBcc: evil@example.com" }), /smtp refused/);
+  assert.equal(bad.calls.length, 0);
+});

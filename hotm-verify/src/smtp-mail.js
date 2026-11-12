@@ -36,7 +36,10 @@ function oneRecipient(value) {
 
 function safeSubject(value) {
   const subject = String(value || "");
-  if (!/^[\x20-\x7E]{1,120}$/.test(subject)) return null;
+  if (subject.length < 1 || subject.length > 120) return null;
+  if (/[\r\n\u0000]/.test(subject)) return null;
+  // Printable ASCII, plus the middle dot used in House Desk subjects.
+  if (!/^[\x20-\x7E\u00B7]+$/.test(subject)) return null;
   return subject;
 }
 
@@ -99,12 +102,13 @@ async function expectCode(lines, wanted) {
   if (code !== wanted) throw smtpError(code);
 }
 
-function messageBytes({ to, subject, text, now }) {
+function messageBytes({ to, subject, text, now, replyTo }) {
   const body = dotStuff(text);
   const date = new Date(now).toUTCString();
   const raw = [
     "From: House of the Monarch <" + WORKSPACE_SENDER + ">",
     "To: <" + to + ">",
+    ...(replyTo ? ["Reply-To: <" + replyTo + ">"] : []),
     "Subject: " + subject,
     "Date: " + date,
     "MIME-Version: 1.0",
@@ -118,7 +122,7 @@ function messageBytes({ to, subject, text, now }) {
   return enc.encode(raw);
 }
 
-async function runSession(socket, { to, subject, text, password, now }) {
+async function runSession(socket, { to, subject, text, replyTo, password, now }) {
   const lines = createReader(socket.readable);
   const writer = socket.writable.getWriter();
   const say = async (line) => {
@@ -135,7 +139,7 @@ async function runSession(socket, { to, subject, text, password, now }) {
   await expectCode(lines, 250);
   await say("DATA");
   await expectCode(lines, 354);
-  await writer.write(messageBytes({ to, subject, text, now }));
+  await writer.write(messageBytes({ to, subject, text, now, replyTo }));
   await expectCode(lines, 250);
   await say("QUIT");
   await readReply(lines).catch(() => {});
@@ -152,6 +156,10 @@ export async function sendWorkspaceMail(env, message) {
   const to = oneRecipient(message && message.to);
   const subject = safeSubject(message && message.subject);
   const text = safeBody(message && message.text);
+  const replyTo = message && message.replyTo != null && message.replyTo !== ""
+    ? oneRecipient(message.replyTo)
+    : null;
+  if ((message && message.replyTo) && !replyTo) throw smtpError("refused");
   if (!to || !subject || text == null) throw smtpError("refused");
   const password = appPassword(env);
   const connect = typeof env.SMTP_CONNECT === "function" ? env.SMTP_CONNECT : defaultConnect;
@@ -176,6 +184,7 @@ export async function sendWorkspaceMail(env, message) {
         to,
         subject,
         text,
+        replyTo,
         password,
         now: typeof env.CLOCK === "function" ? Number(env.CLOCK()) : Date.now(),
       }).then(

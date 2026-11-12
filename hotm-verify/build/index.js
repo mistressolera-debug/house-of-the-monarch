@@ -9,44 +9,37 @@ var TIMEOUT_MS = 12e3;
 var enc = new TextEncoder();
 function appPassword(env) {
   const raw = String(env.SMTP_APP_PASSWORD || "");
-  if (raw.includes("\0"))
-    return null;
+  if (raw.includes("\0")) return null;
   const compact = raw.replace(/[\s\u200B-\u200D\uFEFF]/g, "");
-  if (!/^[A-Za-z]{16}$/.test(compact))
-    return null;
+  if (!/^[A-Za-z]{16}$/.test(compact)) return null;
   return compact;
 }
 __name(appPassword, "appPassword");
 function workspaceSmtpReady(env) {
-  if (!appPassword(env))
-    return false;
+  if (!appPassword(env)) return false;
   const user = String(env.SMTP_USER || WORKSPACE_SENDER).trim().toLowerCase();
   return user === WORKSPACE_SENDER;
 }
 __name(workspaceSmtpReady, "workspaceSmtpReady");
 function oneRecipient(value) {
   const v = String(value || "").trim().toLowerCase();
-  if (v.length < 6 || v.length > 128)
-    return null;
-  if (/[\u0000-\u0020,;<>()[\]\\"]/.test(v))
-    return null;
-  if (!/^[a-z0-9._%+\-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(v))
-    return null;
+  if (v.length < 6 || v.length > 128) return null;
+  if (/[\u0000-\u0020,;<>()[\]\\"]/.test(v)) return null;
+  if (!/^[a-z0-9._%+\-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(v)) return null;
   return v;
 }
 __name(oneRecipient, "oneRecipient");
 function safeSubject(value) {
   const subject = String(value || "");
-  if (!/^[\x20-\x7E]{1,120}$/.test(subject))
-    return null;
+  if (subject.length < 1 || subject.length > 120) return null;
+  if (/[\r\n\u0000]/.test(subject)) return null;
+  if (!/^[\x20-\x7E\u00B7]+$/.test(subject)) return null;
   return subject;
 }
 __name(safeSubject, "safeSubject");
 function safeBody(value) {
-  if (typeof value !== "string" || value.length === 0 || value.length > 8e3)
-    return null;
-  if (value.includes("\0"))
-    return null;
+  if (typeof value !== "string" || value.length === 0 || value.length > 8e3) return null;
+  if (value.includes("\0")) return null;
   return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
 __name(safeBody, "safeBody");
@@ -72,11 +65,9 @@ function createReader(readable) {
           return line;
         }
         const { value, done } = await reader.read();
-        if (done)
-          throw smtpError("closed");
+        if (done) throw smtpError("closed");
         buf += decoder.decode(value, { stream: true });
-        if (buf.length > 65536)
-          throw smtpError("overflow");
+        if (buf.length > 65536) throw smtpError("overflow");
       }
     }
   };
@@ -93,27 +84,25 @@ async function readReply(lines) {
   while (status.length < 40) {
     const line = await lines.line();
     const match = /^(\d{3})([ -])/.exec(line);
-    if (!match)
-      throw smtpError("reply");
+    if (!match) throw smtpError("reply");
     status.push(match[1]);
-    if (match[2] === " ")
-      return Number(match[1]);
+    if (match[2] === " ") return Number(match[1]);
   }
   throw smtpError("reply");
 }
 __name(readReply, "readReply");
 async function expectCode(lines, wanted) {
   const code = await readReply(lines);
-  if (code !== wanted)
-    throw smtpError(code);
+  if (code !== wanted) throw smtpError(code);
 }
 __name(expectCode, "expectCode");
-function messageBytes({ to, subject, text, now }) {
+function messageBytes({ to, subject, text, now, replyTo }) {
   const body = dotStuff(text);
   const date = new Date(now).toUTCString();
   const raw = [
     "From: House of the Monarch <" + WORKSPACE_SENDER + ">",
     "To: <" + to + ">",
+    ...replyTo ? ["Reply-To: <" + replyTo + ">"] : [],
     "Subject: " + subject,
     "Date: " + date,
     "MIME-Version: 1.0",
@@ -127,7 +116,7 @@ function messageBytes({ to, subject, text, now }) {
   return enc.encode(raw);
 }
 __name(messageBytes, "messageBytes");
-async function runSession(socket, { to, subject, text, password, now }) {
+async function runSession(socket, { to, subject, text, replyTo, password, now }) {
   const lines = createReader(socket.readable);
   const writer = socket.writable.getWriter();
   const say = /* @__PURE__ */ __name(async (line) => {
@@ -144,7 +133,7 @@ async function runSession(socket, { to, subject, text, password, now }) {
   await expectCode(lines, 250);
   await say("DATA");
   await expectCode(lines, 354);
-  await writer.write(messageBytes({ to, subject, text, now }));
+  await writer.write(messageBytes({ to, subject, text, now, replyTo }));
   await expectCode(lines, 250);
   await say("QUIT");
   await readReply(lines).catch(() => {
@@ -159,13 +148,13 @@ async function defaultConnect(address, options) {
 }
 __name(defaultConnect, "defaultConnect");
 async function sendWorkspaceMail(env, message) {
-  if (!workspaceSmtpReady(env))
-    throw smtpError("not-configured");
+  if (!workspaceSmtpReady(env)) throw smtpError("not-configured");
   const to = oneRecipient(message && message.to);
   const subject = safeSubject(message && message.subject);
   const text = safeBody(message && message.text);
-  if (!to || !subject || text == null)
-    throw smtpError("refused");
+  const replyTo = message && message.replyTo != null && message.replyTo !== "" ? oneRecipient(message.replyTo) : null;
+  if (message && message.replyTo && !replyTo) throw smtpError("refused");
+  if (!to || !subject || text == null) throw smtpError("refused");
   const password = appPassword(env);
   const connect = typeof env.SMTP_CONNECT === "function" ? env.SMTP_CONNECT : defaultConnect;
   const socket = await connect(
@@ -178,8 +167,7 @@ async function sendWorkspaceMail(env, message) {
   try {
     await new Promise((resolve, reject) => {
       timer = setTimeout(() => {
-        if (settled)
-          return;
+        if (settled) return;
         settled = true;
         socket.close?.().catch(() => {
         });
@@ -189,6 +177,7 @@ async function sendWorkspaceMail(env, message) {
         to,
         subject,
         text,
+        replyTo,
         password,
         now: typeof env.CLOCK === "function" ? Number(env.CLOCK()) : Date.now()
       }).then(
@@ -214,6 +203,133 @@ async function sendWorkspaceMail(env, message) {
 }
 __name(sendWorkspaceMail, "sendWorkspaceMail");
 
+// src/desk-message.js
+var DESK_INBOX = WORKSPACE_SENDER;
+var DESK_HOUR_LIMIT = 5;
+var DESK_DAY_LIMIT = 20;
+var DESK_MESSAGE_MAX = 2e3;
+var DESK_UNAVAILABLE = "The desk can't take messages right now.";
+var DESK_FOOTER = "Sent from the signed-in patron area of houseofthemonarch.com.";
+var NO_REPLY = "Reply-To: none (patron has no verified email)";
+var enc2 = new TextEncoder();
+var hex = /* @__PURE__ */ __name((u) => [...new Uint8Array(u)].map((b) => b.toString(16).padStart(2, "0")).join(""), "hex");
+function nowMs(env) {
+  return typeof env.CLOCK === "function" ? Number(env.CLOCK()) : Date.now();
+}
+__name(nowMs, "nowMs");
+function asRecord(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value;
+}
+__name(asRecord, "asRecord");
+function textField(record, key) {
+  const value = record && record[key];
+  return typeof value === "string" ? value : "";
+}
+__name(textField, "textField");
+function deskHandle(value) {
+  const handle = String(value || "");
+  if (!handle || /[\r\n\u0000]/.test(handle)) return null;
+  if (!/^[A-Za-z0-9_.@+\- ]{2,64}$/.test(handle)) return null;
+  return handle;
+}
+__name(deskHandle, "deskHandle");
+function deskMessageText(value) {
+  if (typeof value !== "string") return null;
+  const text = value.replace(/\u0000/g, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!text || text.length > DESK_MESSAGE_MAX) return null;
+  return text;
+}
+__name(deskMessageText, "deskMessageText");
+function deskSubject(handle) {
+  return "House Desk message \xB7 " + handle;
+}
+__name(deskSubject, "deskSubject");
+function deskBody(handle, message, hasVerified) {
+  const lines = ["Patron Handle: " + handle];
+  if (!hasVerified) lines.push(NO_REPLY);
+  lines.push("", message, "", DESK_FOOTER);
+  return lines.join("\n");
+}
+__name(deskBody, "deskBody");
+function deskReplyTo(patron) {
+  const email = String(patron && patron.verifiedEmail || "").trim().toLowerCase();
+  if (!email) return null;
+  if (/[\r\n\u0000,;<>()[\]\\"]/.test(email)) return null;
+  if (!/^[a-z0-9._%+\-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(email)) return null;
+  return email;
+}
+__name(deskReplyTo, "deskReplyTo");
+async function limitedWindow(env, kind, material, limit, windowMs) {
+  const bucket = Math.floor(nowMs(env) / windowMs);
+  const h = hex(await crypto.subtle.digest("SHA-256", enc2.encode(String(material) + "|" + (env.SESSION_KEY || "")))).slice(0, 32);
+  const key = `rl/${kind}/${bucket}/${h}`;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const obj = await env.BUCKET.get(key);
+    const n = obj ? parseInt(await obj.text(), 10) || 0 : 0;
+    if (n >= limit) return true;
+    const etag = obj && (obj.httpEtag || obj.etag);
+    const onlyIf = etag ? new Headers({ "If-Match": String(etag) }) : new Headers({ "If-None-Match": "*" });
+    const wrote = await env.BUCKET.put(key, String(n + 1), {
+      onlyIf,
+      customMetadata: { expires: String(nowMs(env) + windowMs) }
+    });
+    if (wrote) return false;
+  }
+  return true;
+}
+__name(limitedWindow, "limitedWindow");
+async function sendDesk(env, message) {
+  const payload = { to: message.to, subject: message.subject, text: message.text };
+  if (message.replyTo) payload.replyTo = message.replyTo;
+  if (typeof env.MAIL?.send === "function") {
+    await env.MAIL.send(payload);
+    return;
+  }
+  await sendWorkspaceMail(env, payload);
+}
+__name(sendDesk, "sendDesk");
+function mailReady(env) {
+  return typeof env.MAIL?.send === "function" || workspaceSmtpReady(env);
+}
+__name(mailReady, "mailReady");
+async function deskMessage(req, env, c, api) {
+  const session = await api.checkPatron(env, req);
+  if (!session) return api.json({ error: "unauthorized" }, 401, c);
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return api.json({ error: "bad request" }, 400, c);
+  }
+  const record = asRecord(body);
+  if (!record) return api.json({ error: "bad request" }, 400, c);
+  const message = deskMessageText(textField(record, "message"));
+  if (!message) return api.json({ error: "bad request" }, 400, c);
+  const handle = deskHandle(session.patron && session.patron.handle);
+  if (!handle) return api.json({ error: DESK_UNAVAILABLE }, 503, c);
+  if (!mailReady(env)) return api.json({ error: DESK_UNAVAILABLE }, 503, c);
+  if (await limitedWindow(env, "desk-hour", session.patron.id, DESK_HOUR_LIMIT, 3600 * 1e3)) {
+    return api.json({ error: "Too many messages. Try again later." }, 429, c);
+  }
+  if (await limitedWindow(env, "desk-day", session.patron.id, DESK_DAY_LIMIT, 24 * 3600 * 1e3)) {
+    return api.json({ error: "Too many messages. Try again later." }, 429, c);
+  }
+  const replyTo = deskReplyTo(session.patron);
+  try {
+    await sendDesk(env, {
+      to: DESK_INBOX,
+      subject: deskSubject(handle),
+      text: deskBody(handle, message, !!replyTo),
+      replyTo: replyTo || void 0
+    });
+  } catch {
+    return api.json({ error: DESK_UNAVAILABLE }, 503, c);
+  }
+  return api.json({ ok: true }, 200, c);
+}
+__name(deskMessage, "deskMessage");
+
 // src/recovery.js
 var RECOVERY_TTL_MS = 15 * 60 * 1e3;
 var PASSCODE_MIN = 20;
@@ -221,43 +337,36 @@ var RECOVER_IP_LIMIT = 5;
 var RECOVER_HANDLE_LIMIT = 5;
 var GENERIC = { ok: true };
 var INVALID_LINK = { error: "That link is not valid." };
-var enc2 = new TextEncoder();
-var hex = /* @__PURE__ */ __name((u) => [...new Uint8Array(u)].map((b) => b.toString(16).padStart(2, "0")).join(""), "hex");
+var enc3 = new TextEncoder();
+var hex2 = /* @__PURE__ */ __name((u) => [...new Uint8Array(u)].map((b) => b.toString(16).padStart(2, "0")).join(""), "hex");
 var b64 = /* @__PURE__ */ __name((u) => {
   const a = new Uint8Array(u);
   let s = "";
-  for (let i = 0; i < a.length; i++)
-    s += String.fromCharCode(a[i]);
+  for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
   return btoa(s);
 }, "b64");
-function nowMs(env) {
+function nowMs2(env) {
   const n = typeof env.CLOCK === "function" ? Number(env.CLOCK()) : Date.now();
   return Number.isFinite(n) ? n : Date.now();
 }
-__name(nowMs, "nowMs");
+__name(nowMs2, "nowMs");
 function publicSiteOrigin(env) {
   const raw = String(env.CANONICAL_ORIGIN || env.ALLOWED_ORIGIN || "").trim();
-  if (!/^https:\/\/[A-Za-z0-9.-]+(?::[0-9]{1,5})?$/.test(raw))
-    return null;
+  if (!/^https:\/\/[A-Za-z0-9.-]+(?::[0-9]{1,5})?$/.test(raw)) return null;
   return raw;
 }
 __name(publicSiteOrigin, "publicSiteOrigin");
-function mailReady(env) {
-  if (!publicSiteOrigin(env))
-    return false;
-  if (typeof env.MAIL?.send === "function")
-    return true;
+function mailReady2(env) {
+  if (!publicSiteOrigin(env)) return false;
+  if (typeof env.MAIL?.send === "function") return true;
   return workspaceSmtpReady(env);
 }
-__name(mailReady, "mailReady");
+__name(mailReady2, "mailReady");
 function safeMailbox(value) {
   const v = String(value || "").trim().toLowerCase();
-  if (v.length < 6 || v.length > 128)
-    return null;
-  if (/[\u0000-\u0020,;<>()[\]\\"]/.test(v))
-    return null;
-  if (!/^[a-z0-9._%+\-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(v))
-    return null;
+  if (v.length < 6 || v.length > 128) return null;
+  if (/[\u0000-\u0020,;<>()[\]\\"]/.test(v)) return null;
+  if (!/^[a-z0-9._%+\-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(v)) return null;
   return v;
 }
 __name(safeMailbox, "safeMailbox");
@@ -266,20 +375,18 @@ function isAccount(id) {
 }
 __name(isAccount, "isAccount");
 async function sha256hex(text) {
-  return hex(await crypto.subtle.digest("SHA-256", enc2.encode(text)));
+  return hex2(await crypto.subtle.digest("SHA-256", enc3.encode(text)));
 }
 __name(sha256hex, "sha256hex");
 function newToken() {
   const raw = b64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  if (!/^[A-Za-z0-9_-]{43}$/.test(raw))
-    throw new Error("token");
+  if (!/^[A-Za-z0-9_-]{43}$/.test(raw)) throw new Error("token");
   return raw;
 }
 __name(newToken, "newToken");
 function recoveryLink(env, kind, token) {
   const origin = publicSiteOrigin(env);
-  if (!origin || !/^[A-Za-z0-9_-]{43}$/.test(token))
-    return null;
+  if (!origin || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const name = kind === "email" ? "court-email-verify" : "court-key-reset";
   return `${origin}/#${name}=${token}`;
 }
@@ -296,37 +403,30 @@ async function listPrefix(bucket, prefix) {
 }
 __name(listPrefix, "listPrefix");
 async function deleteRecoveryTokens(env, accountId) {
-  if (!isAccount(accountId))
-    return;
+  if (!isAccount(accountId)) return;
   const prefix = `patrons/recovery-idx/${accountId}/`;
   for (const o of await listPrefix(env.BUCKET, prefix)) {
     const hash = o.key.slice(prefix.length);
-    if (/^[0-9a-f]{64}$/.test(hash))
-      await env.BUCKET.delete(`patrons/recovery/${hash}`);
+    if (/^[0-9a-f]{64}$/.test(hash)) await env.BUCKET.delete(`patrons/recovery/${hash}`);
     await env.BUCKET.delete(o.key);
   }
 }
 __name(deleteRecoveryTokens, "deleteRecoveryTokens");
 async function casPatron(env, id, mutate) {
-  if (!isAccount(id))
-    return null;
+  if (!isAccount(id)) return null;
   for (let attempt = 0; attempt < 8; attempt++) {
     const obj = await env.BUCKET.get(`patrons/acct/${id}.json`);
-    if (!obj)
-      return null;
+    if (!obj) return null;
     const current = JSON.parse(await obj.text());
     const etag = obj.httpEtag || obj.etag;
-    if (!etag)
-      return { rejected: true, patron: current };
+    if (!etag) return { rejected: true, patron: current };
     const next = await mutate(current);
-    if (!next)
-      return { rejected: true, patron: current };
+    if (!next) return { rejected: true, patron: current };
     const wrote = await env.BUCKET.put(`patrons/acct/${id}.json`, JSON.stringify(next), {
       onlyIf: new Headers({ "If-Match": String(etag) }),
       httpMetadata: { contentType: "application/json" }
     });
-    if (wrote)
-      return { changed: true, patron: next };
+    if (wrote) return { changed: true, patron: next };
   }
   return { conflict: true, patron: null };
 }
@@ -342,20 +442,17 @@ async function storeToken(env, fields) {
 }
 __name(storeToken, "storeToken");
 async function loadToken(env, token) {
-  if (!/^[A-Za-z0-9_-]{43}$/.test(String(token || "")))
-    return null;
+  if (!/^[A-Za-z0-9_-]{43}$/.test(String(token || ""))) return null;
   const hash = await sha256hex(token);
   const obj = await env.BUCKET.get(`patrons/recovery/${hash}`);
-  if (!obj)
-    return null;
+  if (!obj) return null;
   let rec;
   try {
     rec = JSON.parse(await obj.text());
   } catch {
     return null;
   }
-  if (!rec || typeof rec !== "object")
-    return null;
+  if (!rec || typeof rec !== "object") return null;
   rec.hash = hash;
   return rec;
 }
@@ -376,6 +473,7 @@ async function discardToken(env, accountId, hash) {
 __name(discardToken, "discardToken");
 async function sendOne(env, message) {
   const payload = { to: message.to, subject: message.subject, text: message.text };
+  if (message.replyTo) payload.replyTo = message.replyTo;
   if (typeof env.MAIL?.send === "function") {
     await env.MAIL.send(payload);
     return;
@@ -388,54 +486,47 @@ function generation(value) {
   return Number.isInteger(n) && n >= 0 ? n : 0;
 }
 __name(generation, "generation");
-function asRecord(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    return null;
+function asRecord2(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value;
 }
-__name(asRecord, "asRecord");
-function textField(record, key) {
+__name(asRecord2, "asRecord");
+function textField2(record, key) {
   const value = record && record[key];
   return typeof value === "string" ? value : "";
 }
-__name(textField, "textField");
+__name(textField2, "textField");
 async function pause(env, name) {
-  if (typeof env.BARRIER === "function")
-    await env.BARRIER(name);
+  if (typeof env.BARRIER === "function") await env.BARRIER(name);
 }
 __name(pause, "pause");
 async function courtKeyMatches(api, patron, passcode) {
   const pass = api.normPass(passcode);
-  if (!pass)
-    return false;
+  if (!pass) return false;
   const parts = String(patron && patron.hash || "").split("$");
-  if (parts.length !== 4 || parts[0] !== "pbkdf2")
-    return false;
+  if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
   const iters = parseInt(parts[1], 10);
-  if (!iters)
-    return false;
+  if (!iters) return false;
   const got = await api.hashPassword(pass, parts[2], iters);
   return api.timingEq(got, parts[3]);
 }
 __name(courtKeyMatches, "courtKeyMatches");
 async function limited(env, kind, material, limit) {
   const windowMs = 3600 * 1e3;
-  const bucket = Math.floor(nowMs(env) / windowMs);
-  const h = hex(await crypto.subtle.digest("SHA-256", enc2.encode(String(material) + "|" + (env.SESSION_KEY || "")))).slice(0, 32);
+  const bucket = Math.floor(nowMs2(env) / windowMs);
+  const h = hex2(await crypto.subtle.digest("SHA-256", enc3.encode(String(material) + "|" + (env.SESSION_KEY || "")))).slice(0, 32);
   const key = `rl/${kind}/${bucket}/${h}`;
   for (let attempt = 0; attempt < 8; attempt++) {
     const obj = await env.BUCKET.get(key);
     const n = obj ? parseInt(await obj.text(), 10) || 0 : 0;
-    if (n >= limit)
-      return true;
+    if (n >= limit) return true;
     const etag = obj && (obj.httpEtag || obj.etag);
     const onlyIf = etag ? new Headers({ "If-Match": String(etag) }) : new Headers({ "If-None-Match": "*" });
     const wrote = await env.BUCKET.put(key, String(n + 1), {
       onlyIf,
-      customMetadata: { expires: String(nowMs(env) + windowMs) }
+      customMetadata: { expires: String(nowMs2(env) + windowMs) }
     });
-    if (wrote)
-      return false;
+    if (wrote) return false;
   }
   return true;
 }
@@ -451,17 +542,16 @@ async function recoveryRequest(req, env, c, api) {
   } catch {
     return api.json({ error: "bad request" }, 400, c);
   }
-  const record = asRecord(body);
-  if (!record)
-    return api.json({ error: "bad request" }, 400, c);
-  const handle = api.normHandle(textField(record, "handle"));
+  const record = asRecord2(body);
+  if (!record) return api.json({ error: "bad request" }, 400, c);
+  const handle = api.normHandle(textField2(record, "handle"));
   if (await limited(env, "recover-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
   if (handle && await limited(env, "recover-handle", handle.toLowerCase(), RECOVER_HANDLE_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  if (handle && mailReady(env)) {
+  if (handle && mailReady2(env)) {
     const idObj = await env.BUCKET.get(await api.handleKey(handle));
     const id = idObj ? String(await idObj.text()).trim() : "";
     const patron = id ? await api.getPatron(env, id) : null;
@@ -471,7 +561,7 @@ async function recoveryRequest(req, env, c, api) {
         purpose: "password-reset",
         accountId: patron.id,
         generation: generation(patron.recoveryGen),
-        expiresAt: nowMs(env) + RECOVERY_TTL_MS
+        expiresAt: nowMs2(env) + RECOVERY_TTL_MS
       });
       const link = recoveryLink(env, "reset", token);
       let sent = false;
@@ -487,8 +577,7 @@ async function recoveryRequest(req, env, c, api) {
           sent = false;
         }
       }
-      if (!sent)
-        await discardToken(env, patron.id, hash);
+      if (!sent) await discardToken(env, patron.id, hash);
     }
   }
   return api.json(GENERIC, 200, c);
@@ -504,26 +593,23 @@ async function recoveryComplete(req, env, c, api) {
   if (await limited(env, "recover-complete-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  const record = asRecord(body);
-  const rec = await loadToken(env, textField(record, "token"));
+  const record = asRecord2(body);
+  const rec = await loadToken(env, textField2(record, "token"));
   if (!rec || rec.purpose !== "password-reset" || !isAccount(rec.accountId) || !Number.isInteger(Number(rec.generation))) {
     return api.json(INVALID_LINK, 400, c);
   }
   await pause(env, "complete:loaded");
-  if (!(nowMs(env) < Number(rec.expiresAt)))
-    return api.json(INVALID_LINK, 400, c);
-  const passcode = textField(record, "passcode");
+  if (!(nowMs2(env) < Number(rec.expiresAt))) return api.json(INVALID_LINK, 400, c);
+  const passcode = textField2(record, "passcode");
   if (api.normPass(passcode).length < PASSCODE_MIN) {
     return api.json({ error: "Court key must be at least 20 letters or numbers." }, 400, c);
   }
-  const now = nowMs(env);
-  if (!await claimToken(env, rec.hash, now))
-    return api.json(INVALID_LINK, 400, c);
+  const now = nowMs2(env);
+  if (!await claimToken(env, rec.hash, now)) return api.json(INVALID_LINK, 400, c);
   const hash = await api.hashPasscode(passcode);
   const when = new Date(now).toISOString();
   const wrote = await casPatron(env, rec.accountId, (p) => {
-    if (generation(p.recoveryGen) !== Number(rec.generation))
-      return null;
+    if (generation(p.recoveryGen) !== Number(rec.generation)) return null;
     return {
       ...p,
       hash,
@@ -532,8 +618,7 @@ async function recoveryComplete(req, env, c, api) {
       sessionGen: generation(p.sessionGen) + 1
     };
   });
-  if (!wrote || !wrote.changed)
-    return api.json(INVALID_LINK, 400, c);
+  if (!wrote || !wrote.changed) return api.json(INVALID_LINK, 400, c);
   await deleteRecoveryTokens(env, rec.accountId);
   await api.killPatronSessions(env, rec.accountId);
   return api.json({ ok: true }, 200, c);
@@ -541,41 +626,36 @@ async function recoveryComplete(req, env, c, api) {
 __name(recoveryComplete, "recoveryComplete");
 async function recoveryEnroll(req, env, c, api) {
   const session = await api.checkPatron(env, req);
-  if (!session)
-    return api.json({ error: "unauthorized" }, 401, c);
+  if (!session) return api.json({ error: "unauthorized" }, 401, c);
   let body;
   try {
     body = await req.json();
   } catch {
     return api.json({ error: "bad request" }, 400, c);
   }
-  const record = asRecord(body);
-  if (!record)
-    return api.json({ error: "bad request" }, 400, c);
+  const record = asRecord2(body);
+  if (!record) return api.json({ error: "bad request" }, 400, c);
   if (await limited(env, "recover-enroll-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  const email = safeMailbox(textField(record, "email"));
-  if (!email)
-    return api.json({ error: "bad email" }, 400, c);
-  if (!await courtKeyMatches(api, session.patron, textField(record, "passcode"))) {
+  const email = safeMailbox(textField2(record, "email"));
+  if (!email) return api.json({ error: "bad email" }, 400, c);
+  if (!await courtKeyMatches(api, session.patron, textField2(record, "passcode"))) {
     return api.json({ error: "unauthorized" }, 401, c);
   }
-  if (mailReady(env)) {
+  if (mailReady2(env)) {
     const bumped = await casPatron(env, session.patron.id, (p) => {
-      if (p.hash !== session.patron.hash || generation(p.sessionGen) !== generation(session.patron.sessionGen))
-        return null;
+      if (p.hash !== session.patron.hash || generation(p.sessionGen) !== generation(session.patron.sessionGen)) return null;
       return { ...p, recoveryGen: generation(p.recoveryGen) + 1 };
     });
-    if (!bumped || !bumped.changed)
-      return api.json({ error: "unauthorized" }, 401, c);
+    if (!bumped || !bumped.changed) return api.json({ error: "unauthorized" }, 401, c);
     await deleteRecoveryTokens(env, session.patron.id);
     const { token, hash } = await storeToken(env, {
       purpose: "email-verify",
       accountId: session.patron.id,
       email,
       generation: generation(bumped.patron.recoveryGen),
-      expiresAt: nowMs(env) + RECOVERY_TTL_MS
+      expiresAt: nowMs2(env) + RECOVERY_TTL_MS
     });
     const link = recoveryLink(env, "email", token);
     let sent = false;
@@ -591,8 +671,7 @@ async function recoveryEnroll(req, env, c, api) {
         sent = false;
       }
     }
-    if (!sent)
-      await discardToken(env, session.patron.id, hash);
+    if (!sent) await discardToken(env, session.patron.id, hash);
   }
   return api.json(GENERIC, 200, c);
 }
@@ -607,23 +686,19 @@ async function recoveryConfirmEmail(req, env, c, api) {
   if (await limited(env, "recover-confirm-ip", clientIp(req), RECOVER_IP_LIMIT)) {
     return api.json({ error: "Too many attempts. Try again later." }, 429, c);
   }
-  const record = asRecord(body);
-  const rec = await loadToken(env, textField(record, "token"));
+  const record = asRecord2(body);
+  const rec = await loadToken(env, textField2(record, "token"));
   if (!rec || rec.purpose !== "email-verify" || !isAccount(rec.accountId) || !Number.isInteger(Number(rec.generation))) {
     return api.json(INVALID_LINK, 400, c);
   }
   const email = safeMailbox(rec.email);
-  if (!email)
-    return api.json(INVALID_LINK, 400, c);
+  if (!email) return api.json(INVALID_LINK, 400, c);
   await pause(env, "confirm:loaded");
-  if (!(nowMs(env) < Number(rec.expiresAt)))
-    return api.json(INVALID_LINK, 400, c);
-  if (!await claimToken(env, rec.hash, nowMs(env)))
-    return api.json(INVALID_LINK, 400, c);
-  const when = new Date(nowMs(env)).toISOString();
+  if (!(nowMs2(env) < Number(rec.expiresAt))) return api.json(INVALID_LINK, 400, c);
+  if (!await claimToken(env, rec.hash, nowMs2(env))) return api.json(INVALID_LINK, 400, c);
+  const when = new Date(nowMs2(env)).toISOString();
   const wrote = await casPatron(env, rec.accountId, (p) => {
-    if (generation(p.recoveryGen) !== Number(rec.generation))
-      return null;
+    if (generation(p.recoveryGen) !== Number(rec.generation)) return null;
     return {
       ...p,
       verifiedEmail: email,
@@ -631,27 +706,24 @@ async function recoveryConfirmEmail(req, env, c, api) {
       recoveryGen: generation(p.recoveryGen) + 1
     };
   });
-  if (!wrote || !wrote.changed)
-    return api.json(INVALID_LINK, 400, c);
+  if (!wrote || !wrote.changed) return api.json(INVALID_LINK, 400, c);
   await deleteRecoveryTokens(env, rec.accountId);
   return api.json({ ok: true }, 200, c);
 }
 __name(recoveryConfirmEmail, "recoveryConfirmEmail");
 async function purgeRecovery(env) {
-  const now = nowMs(env);
+  const now = nowMs2(env);
   const prefix = "patrons/recovery/";
   for (const o of await listPrefix(env.BUCKET, prefix)) {
     const obj = await env.BUCKET.get(o.key);
-    if (!obj)
-      continue;
+    if (!obj) continue;
     let rec;
     try {
       rec = JSON.parse(await obj.text());
     } catch {
       continue;
     }
-    if (!rec || !(Number(rec.expiresAt) <= now))
-      continue;
+    if (!rec || !(Number(rec.expiresAt) <= now)) continue;
     await env.BUCKET.delete(o.key);
     const hash = o.key.slice(prefix.length);
     if (isAccount(rec.accountId) && /^[0-9a-f]{64}$/.test(hash)) {
@@ -661,16 +733,11 @@ async function purgeRecovery(env) {
 }
 __name(purgeRecovery, "purgeRecovery");
 function recoveryPaths(path, method) {
-  if (path === "/patron/recovery/request" && method === "POST")
-    return "request";
-  if (path === "/patron/recovery/complete" && method === "POST")
-    return "complete";
-  if (path === "/patron/recovery/email" && method === "POST")
-    return "enroll";
-  if (path === "/patron/recovery/email/confirm" && method === "POST")
-    return "confirm";
-  if (path.startsWith("/patron/recovery") && (method === "GET" || method === "HEAD"))
-    return "prefetch";
+  if (path === "/patron/recovery/request" && method === "POST") return "request";
+  if (path === "/patron/recovery/complete" && method === "POST") return "complete";
+  if (path === "/patron/recovery/email" && method === "POST") return "enroll";
+  if (path === "/patron/recovery/email/confirm" && method === "POST") return "confirm";
+  if (path.startsWith("/patron/recovery") && (method === "GET" || method === "HEAD")) return "prefetch";
   return "";
 }
 __name(recoveryPaths, "recoveryPaths");
@@ -692,16 +759,15 @@ var SEC = {
   "X-Frame-Options": "DENY",
   "Strict-Transport-Security": "max-age=31536000"
 };
-var enc3 = new TextEncoder();
+var enc4 = new TextEncoder();
 var b642 = /* @__PURE__ */ __name((u) => {
   const a = new Uint8Array(u);
   let s = "";
-  for (let i = 0; i < a.length; i++)
-    s += String.fromCharCode(a[i]);
+  for (let i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
   return btoa(s);
 }, "b64");
 var unb64 = /* @__PURE__ */ __name((s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)), "unb64");
-var hex2 = /* @__PURE__ */ __name((u) => [...new Uint8Array(u)].map((b) => b.toString(16).padStart(2, "0")).join(""), "hex");
+var hex3 = /* @__PURE__ */ __name((u) => [...new Uint8Array(u)].map((b) => b.toString(16).padStart(2, "0")).join(""), "hex");
 function resp(body, status = 200, headers = {}) {
   return new Response(body, { status, headers: { ...SEC, ...headers } });
 }
@@ -718,23 +784,20 @@ function cors(env, req) {
 }
 __name(cors, "cors");
 function timingEq(a, b) {
-  if (a.length !== b.length)
-    return false;
+  if (a.length !== b.length) return false;
   let r = 0;
-  for (let i = 0; i < a.length; i++)
-    r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
 __name(timingEq, "timingEq");
 async function rateLimited(env, req, kind, limit) {
   const ip = req.headers.get("CF-Connecting-IP") || "unknown";
   const bucket = Math.floor(Date.now() / 1e3 / RL_WINDOW);
-  const h = hex2(await crypto.subtle.digest("SHA-256", enc3.encode(ip + "|" + env.SESSION_KEY))).slice(0, 32);
+  const h = hex3(await crypto.subtle.digest("SHA-256", enc4.encode(ip + "|" + env.SESSION_KEY))).slice(0, 32);
   const key = `rl/${kind}/${bucket}/${h}`;
   const obj = await env.BUCKET.get(key);
   const n = obj ? parseInt(await obj.text()) || 0 : 0;
-  if (n >= limit)
-    return true;
+  if (n >= limit) return true;
   await env.BUCKET.put(key, String(n + 1), { customMetadata: { expires: String(Date.now() + RL_WINDOW * 1e3) } });
   return false;
 }
@@ -762,15 +825,14 @@ async function decryptBytes(env, packed) {
 __name(decryptBytes, "decryptBytes");
 async function hashPassword(password, saltB64, iters) {
   const salt = unb64(saltB64);
-  const base = await crypto.subtle.importKey("raw", enc3.encode(password), "PBKDF2", false, ["deriveBits"]);
+  const base = await crypto.subtle.importKey("raw", enc4.encode(password), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: iters, hash: "SHA-256" }, base, 256);
   return b642(bits);
 }
 __name(hashPassword, "hashPassword");
 async function verifyPassword(env, password) {
   const parts = (env.ADMIN_PW_HASH || "").split("$");
-  if (parts.length !== 4 || parts[0] !== "pbkdf2")
-    return false;
+  if (parts.length !== 4 || parts[0] !== "pbkdf2") return false;
   const iters = parseInt(parts[1], 10);
   const got = await hashPassword(password, parts[2], iters);
   return timingEq(got, parts[3]);
@@ -782,12 +844,10 @@ function base32Decode(s) {
   s = s.replace(/=+$/, "").toUpperCase().replace(/[^A-Z2-7]/g, "");
   for (const c of s) {
     const v = alphabet.indexOf(c);
-    if (v < 0)
-      continue;
+    if (v < 0) continue;
     bits += v.toString(2).padStart(5, "0");
   }
-  for (let i = 0; i + 8 <= bits.length; i += 8)
-    out.push(parseInt(bits.slice(i, i + 8), 2));
+  for (let i = 0; i + 8 <= bits.length; i += 8) out.push(parseInt(bits.slice(i, i + 8), 2));
   return new Uint8Array(out);
 }
 __name(base32Decode, "base32Decode");
@@ -803,12 +863,10 @@ async function totp(secretB32, step = Math.floor(Date.now() / 1e3 / 30)) {
 __name(totp, "totp");
 async function verifyTotp(env, code) {
   const c = String(code || "").replace(/\s/g, "");
-  if (!/^\d{6}$/.test(c))
-    return false;
+  if (!/^\d{6}$/.test(c)) return false;
   const now = Math.floor(Date.now() / 1e3 / 30);
   for (const s of [now - 1, now, now + 1]) {
-    if (timingEq(await totp(env.TOTP_SECRET, s), c))
-      return true;
+    if (timingEq(await totp(env.TOTP_SECRET, s), c)) return true;
   }
   return false;
 }
@@ -817,17 +875,15 @@ async function makeSession(env, hours = 4) {
   const exp = Date.now() + hours * 3600 * 1e3;
   const payload = `admin|${exp}`;
   const key = await crypto.subtle.importKey("raw", unb64(env.SESSION_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = b642(await crypto.subtle.sign("HMAC", key, enc3.encode(payload)));
+  const sig = b642(await crypto.subtle.sign("HMAC", key, enc4.encode(payload)));
   return btoa(payload) + "." + sig;
 }
 __name(makeSession, "makeSession");
 async function checkSession(env, cookieHeader) {
   const m = /(?:^|;\s*)hotm_admin=([^;]+)/.exec(cookieHeader || "");
-  if (!m)
-    return false;
+  if (!m) return false;
   const [pB64, sig] = m[1].split(".");
-  if (!pB64 || !sig)
-    return false;
+  if (!pB64 || !sig) return false;
   let payload;
   try {
     payload = atob(pB64);
@@ -835,12 +891,10 @@ async function checkSession(env, cookieHeader) {
     return false;
   }
   const key = await crypto.subtle.importKey("raw", unb64(env.SESSION_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const expect = b642(await crypto.subtle.sign("HMAC", key, enc3.encode(payload)));
-  if (!timingEq(expect, sig))
-    return false;
+  const expect = b642(await crypto.subtle.sign("HMAC", key, enc4.encode(payload)));
+  if (!timingEq(expect, sig)) return false;
   const parts = payload.split("|");
-  if (parts[0] !== "admin")
-    return false;
+  if (parts[0] !== "admin") return false;
   return Date.now() < parseInt(parts[1], 10);
 }
 __name(checkSession, "checkSession");
@@ -849,15 +903,13 @@ function sessionCookie(token) {
 }
 __name(sessionCookie, "sessionCookie");
 function uid() {
-  return hex2(crypto.getRandomValues(new Uint8Array(16)));
+  return hex3(crypto.getRandomValues(new Uint8Array(16)));
 }
 __name(uid, "uid");
 async function handleApply(req, env) {
   const c = cors(env, req);
-  if (!c)
-    return json({ error: "origin not allowed" }, 403);
-  if (await rateLimited(env, req, "apply", RL_LIMIT))
-    return json({ error: "rate limited" }, 429, c);
+  if (!c) return json({ error: "origin not allowed" }, 403);
+  if (await rateLimited(env, req, "apply", RL_LIMIT)) return json({ error: "rate limited" }, 429, c);
   let form;
   try {
     form = await req.formData();
@@ -870,17 +922,12 @@ async function handleApply(req, env) {
   const consent = String(form.get("consent") || "");
   const idFile = form.get("id_image");
   const selfie = form.get("selfie");
-  if (!handle || !email || !consent)
-    return json({ error: "missing fields" }, 400, c);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-    return json({ error: "bad email" }, 400, c);
-  if (!(idFile instanceof File) || !(selfie instanceof File))
-    return json({ error: "files required" }, 400, c);
+  if (!handle || !email || !consent) return json({ error: "missing fields" }, 400, c);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "bad email" }, 400, c);
+  if (!(idFile instanceof File) || !(selfie instanceof File)) return json({ error: "files required" }, 400, c);
   for (const f of [idFile, selfie]) {
-    if (f.size <= 0 || f.size > MAX_FILE)
-      return json({ error: "file size" }, 400, c);
-    if (!TYPES[f.type])
-      return json({ error: "file type" }, 400, c);
+    if (f.size <= 0 || f.size > MAX_FILE) return json({ error: "file size" }, 400, c);
+    if (!TYPES[f.type]) return json({ error: "file type" }, 400, c);
   }
   const id = uid();
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -912,32 +959,27 @@ async function listPending(env) {
   const out = [];
   for (const o of listed.objects || []) {
     const obj = await env.BUCKET.get(o.key);
-    if (!obj)
-      continue;
+    if (!obj) continue;
     const m = JSON.parse(await obj.text());
-    if (m.status === "pending")
-      out.push({ id: m.id, handle: m.handle, name: m.name, email: m.email, createdAt: m.createdAt });
+    if (m.status === "pending") out.push({ id: m.id, handle: m.handle, name: m.name, email: m.email, createdAt: m.createdAt });
   }
   out.sort((a, b) => a.createdAt < b.createdAt ? 1 : -1);
   return out;
 }
 __name(listPending, "listPending");
 async function getMeta(env, id) {
-  if (!/^[0-9a-f]{32}$/.test(id))
-    return null;
+  if (!/^[0-9a-f]{32}$/.test(id)) return null;
   const obj = await env.BUCKET.get(`meta/${id}.json`);
   return obj ? JSON.parse(await obj.text()) : null;
 }
 __name(getMeta, "getMeta");
 async function delIdFile(env, key) {
-  if (/^files\/[0-9a-f]{32}\/(id|selfie)\.bin$/.test(String(key || "")))
-    await env.BUCKET.delete(key);
+  if (/^files\/[0-9a-f]{32}\/(id|selfie)\.bin$/.test(String(key || ""))) await env.BUCKET.delete(key);
 }
 __name(delIdFile, "delIdFile");
 async function decide(env, id, decision) {
   const meta = await getMeta(env, id);
-  if (!meta || meta.status !== "pending")
-    return null;
+  if (!meta || meta.status !== "pending") return null;
   await delIdFile(env, meta.idKey);
   await delIdFile(env, meta.selfieKey);
   const kept = {
@@ -953,26 +995,21 @@ async function decide(env, id, decision) {
 __name(decide, "decide");
 async function serveImage(env, id, which) {
   const meta = await getMeta(env, id);
-  if (!meta || meta.status !== "pending")
-    return resp("gone", 404);
+  if (!meta || meta.status !== "pending") return resp("gone", 404);
   const key = which === "selfie" ? meta.selfieKey : meta.idKey;
   const type = which === "selfie" ? meta.selfieType : meta.idType;
   const obj = await env.BUCKET.get(key);
-  if (!obj)
-    return resp("gone", 404);
+  if (!obj) return resp("gone", 404);
   const packed = new Uint8Array(await obj.arrayBuffer());
   const plain = await decryptBytes(env, packed);
   return resp(plain, 200, { "Content-Type": type || "application/octet-stream" });
 }
 __name(serveImage, "serveImage");
 function sniffImage(b) {
-  if (b.length >= 3 && b[0] === 255 && b[1] === 216 && b[2] === 255)
-    return "image/jpeg";
+  if (b.length >= 3 && b[0] === 255 && b[1] === 216 && b[2] === 255) return "image/jpeg";
   const png = [137, 80, 78, 71, 13, 10, 26, 10];
-  if (b.length >= 8 && png.every((v, i) => b[i] === v))
-    return "image/png";
-  if (b.length >= 12 && b[0] === 82 && b[1] === 73 && b[2] === 70 && b[3] === 70 && b[8] === 87 && b[9] === 69 && b[10] === 66 && b[11] === 80)
-    return "image/webp";
+  if (b.length >= 8 && png.every((v, i) => b[i] === v)) return "image/png";
+  if (b.length >= 12 && b[0] === 82 && b[1] === 73 && b[2] === 70 && b[3] === 70 && b[8] === 87 && b[9] === 69 && b[10] === 66 && b[11] === 80) return "image/webp";
   return null;
 }
 __name(sniffImage, "sniffImage");
@@ -983,19 +1020,16 @@ __name(sameOriginAdmin, "sameOriginAdmin");
 async function serveBanner(env, head) {
   const obj = head ? await env.BUCKET.head(BANNER_KEY) : await env.BUCKET.get(BANNER_KEY);
   const pub = { "Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*", "Cross-Origin-Resource-Policy": "cross-origin" };
-  if (!obj)
-    return resp("no banner", 404, { ...pub, "Cache-Control": "public, max-age=60", "Content-Type": "text/plain" });
+  if (!obj) return resp("no banner", 404, { ...pub, "Cache-Control": "public, max-age=60", "Content-Type": "text/plain" });
   const type = obj.httpMetadata && obj.httpMetadata.contentType || "application/octet-stream";
   const h = { ...pub, "Content-Type": type, "Content-Length": String(obj.size) };
-  if (obj.httpEtag)
-    h["ETag"] = obj.httpEtag;
+  if (obj.httpEtag) h["ETag"] = obj.httpEtag;
   return resp(head ? null : obj.body, 200, h);
 }
 __name(serveBanner, "serveBanner");
 async function bannerInfo(env) {
   const obj = await env.BUCKET.head(BANNER_KEY);
-  if (!obj)
-    return { exists: false };
+  if (!obj) return { exists: false };
   return { exists: true, size: obj.size, type: obj.httpMetadata && obj.httpMetadata.contentType, uploaded: obj.uploaded };
 }
 __name(bannerInfo, "bannerInfo");
@@ -1007,14 +1041,11 @@ async function uploadBanner(req, env) {
     return json({ error: "bad form" }, 400);
   }
   const f = form.get("banner");
-  if (!(f instanceof File))
-    return json({ error: "file required" }, 400);
-  if (f.size <= 0 || f.size > BANNER_MAX)
-    return json({ error: "file must be under 5 MB" }, 400);
+  if (!(f instanceof File)) return json({ error: "file required" }, 400);
+  if (f.size <= 0 || f.size > BANNER_MAX) return json({ error: "file must be under 5 MB" }, 400);
   const bytes = new Uint8Array(await f.arrayBuffer());
   const type = sniffImage(bytes);
-  if (!type)
-    return json({ error: "only JPEG, PNG or WebP images" }, 400);
+  if (!type) return json({ error: "only JPEG, PNG or WebP images" }, 400);
   await env.BUCKET.put(BANNER_KEY, bytes, { httpMetadata: { contentType: type, cacheControl: "public, max-age=300" } });
   return json({ ok: true, ...await bannerInfo(env) });
 }
@@ -1031,7 +1062,7 @@ function normHandle(h) {
 }
 __name(normHandle, "normHandle");
 async function handleKey(handle) {
-  return "patrons/handle/" + hex2(await crypto.subtle.digest("SHA-256", enc3.encode(handle.toLowerCase())));
+  return "patrons/handle/" + hex3(await crypto.subtle.digest("SHA-256", enc4.encode(handle.toLowerCase())));
 }
 __name(handleKey, "handleKey");
 function newPasscode() {
@@ -1039,8 +1070,7 @@ function newPasscode() {
   while (out.length < 20) {
     const r = crypto.getRandomValues(new Uint8Array(32));
     for (const b of r) {
-      if (b < 248 && out.length < 20)
-        out.push(PASS_ALPHA[b % 31]);
+      if (b < 248 && out.length < 20) out.push(PASS_ALPHA[b % 31]);
     }
   }
   return out.join("").match(/.{4}/g).join("-");
@@ -1053,8 +1083,7 @@ async function hashPasscode(pass) {
 }
 __name(hashPasscode, "hashPasscode");
 async function getPatron(env, id) {
-  if (!/^[0-9a-f]{32}$/.test(String(id || "")))
-    return null;
+  if (!/^[0-9a-f]{32}$/.test(String(id || ""))) return null;
   const o = await env.BUCKET.get(`patrons/acct/${id}.json`);
   return o ? JSON.parse(await o.text()) : null;
 }
@@ -1069,10 +1098,8 @@ async function handleTaken(env, handle) {
 __name(handleTaken, "handleTaken");
 async function createPatron(env, handle, source) {
   const h = normHandle(handle);
-  if (!h)
-    return { error: "handle must be 2-64 letters, numbers, spaces or _ . @ + -" };
-  if (await handleTaken(env, h))
-    return { error: "that handle already has a patron account" };
+  if (!h) return { error: "handle must be 2-64 letters, numbers, spaces or _ . @ + -" };
+  if (await handleTaken(env, h)) return { error: "that handle already has a patron account" };
   const passcode = newPasscode();
   const p = { id: uid(), handle: h, hash: await hashPasscode(passcode), source, createdAt: (/* @__PURE__ */ new Date()).toISOString() };
   await env.BUCKET.put(await handleKey(h), p.id);
@@ -1093,8 +1120,7 @@ async function listAll(env, prefix, include) {
 __name(listAll, "listAll");
 async function killPatronSessions(env, id) {
   const objs = await listAll(env, `patrons/sess/${id}/`);
-  for (const o of objs)
-    await env.BUCKET.delete(o.key);
+  for (const o of objs) await env.BUCKET.delete(o.key);
   return objs.length;
 }
 __name(killPatronSessions, "killPatronSessions");
@@ -1102,8 +1128,7 @@ async function listPatrons(env) {
   const out = [];
   for (const o of await listAll(env, "patrons/acct/")) {
     const obj = await env.BUCKET.get(o.key);
-    if (!obj)
-      continue;
+    if (!obj) continue;
     const p = JSON.parse(await obj.text());
     out.push({ id: p.id, handle: p.handle, source: p.source, createdAt: p.createdAt, resetAt: p.resetAt || null });
   }
@@ -1113,8 +1138,7 @@ async function listPatrons(env) {
 __name(listPatrons, "listPatrons");
 async function revokePatron(env, id) {
   const p = await getPatron(env, id);
-  if (!p)
-    return false;
+  if (!p) return false;
   await env.BUCKET.delete(`patrons/acct/${p.id}.json`);
   await env.BUCKET.delete(await handleKey(p.handle));
   await killPatronSessions(env, p.id);
@@ -1124,19 +1148,17 @@ async function revokePatron(env, id) {
 __name(revokePatron, "revokePatron");
 async function resetPatron(env, id) {
   const existing = await getPatron(env, id);
-  if (!existing)
-    return null;
+  if (!existing) return null;
   const passcode = newPasscode();
   const hash = await hashPasscode(passcode);
   const wrote = await casPatron(env, id, (p) => ({
     ...p,
     hash,
-    resetAt: new Date(nowMs(env)).toISOString(),
+    resetAt: new Date(nowMs2(env)).toISOString(),
     recoveryGen: (Number.isInteger(p.recoveryGen) ? p.recoveryGen : 0) + 1,
     sessionGen: (Number.isInteger(p.sessionGen) ? p.sessionGen : 0) + 1
   }));
-  if (!wrote || !wrote.changed)
-    return null;
+  if (!wrote || !wrote.changed) return null;
   await deleteRecoveryTokens(env, id);
   await killPatronSessions(env, id);
   return { patron: { id: wrote.patron.id, handle: wrote.patron.handle }, passcode };
@@ -1148,13 +1170,12 @@ function recoveryApi() {
 __name(recoveryApi, "recoveryApi");
 async function hmacSign(env, payload) {
   const key = await crypto.subtle.importKey("raw", unb64(env.SESSION_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return b642(await crypto.subtle.sign("HMAC", key, enc3.encode(payload)));
+  return b642(await crypto.subtle.sign("HMAC", key, enc4.encode(payload)));
 }
 __name(hmacSign, "hmacSign");
 async function sessionCurrent(env, patron, sid) {
   const sess = await env.BUCKET.head(`patrons/sess/${patron.id}/${sid}`);
-  if (!sess)
-    return false;
+  if (!sess) return false;
   const raw = sess.customMetadata && sess.customMetadata.sessionGen;
   const stamped = raw == null || raw === "" ? 0 : Number(raw);
   const current = Number.isInteger(patron.sessionGen) ? patron.sessionGen : 0;
@@ -1165,10 +1186,8 @@ async function makePatronToken(env, p) {
   const fresh = await getPatron(env, p.id);
   const seenGen = Number.isInteger(p.sessionGen) ? p.sessionGen : 0;
   const freshGen = fresh && Number.isInteger(fresh.sessionGen) ? fresh.sessionGen : 0;
-  if (!fresh || fresh.hash !== p.hash || freshGen !== seenGen)
-    return null;
-  if (typeof env.BARRIER === "function")
-    await env.BARRIER("login:before-session");
+  if (!fresh || fresh.hash !== p.hash || freshGen !== seenGen) return null;
+  if (typeof env.BARRIER === "function") await env.BARRIER("login:before-session");
   const sid = uid();
   const exp = Date.now() + PATRON_SESSION_DAYS * 86400 * 1e3;
   await env.BUCKET.put(`patrons/sess/${p.id}/${sid}`, String(seenGen), {
@@ -1180,24 +1199,19 @@ async function makePatronToken(env, p) {
 __name(makePatronToken, "makePatronToken");
 async function checkPatron(env, req) {
   const m = /^Bearer\s+([A-Za-z0-9+/=]+)\.([A-Za-z0-9+/=]+)$/.exec(req.headers.get("Authorization") || "");
-  if (!m)
-    return null;
+  if (!m) return null;
   let payload;
   try {
     payload = atob(m[1]);
   } catch {
     return null;
   }
-  if (!timingEq(await hmacSign(env, payload), m[2]))
-    return null;
+  if (!timingEq(await hmacSign(env, payload), m[2])) return null;
   const [kind, id, sid, exp] = payload.split("|");
-  if (kind !== "patron" || !/^[0-9a-f]{32}$/.test(sid || "") || !(Date.now() < parseInt(exp, 10)))
-    return null;
+  if (kind !== "patron" || !/^[0-9a-f]{32}$/.test(sid || "") || !(Date.now() < parseInt(exp, 10))) return null;
   const p = await getPatron(env, id);
-  if (!p)
-    return null;
-  if (!await sessionCurrent(env, p, sid))
-    return null;
+  if (!p) return null;
+  if (!await sessionCurrent(env, p, sid)) return null;
   return { patron: p, sid };
 }
 __name(checkPatron, "checkPatron");
@@ -1214,12 +1228,11 @@ function patronCors(env, req) {
 __name(patronCors, "patronCors");
 async function rateLimitedKey(env, kind, keyStr, limit) {
   const bucket = Math.floor(Date.now() / 1e3 / RL_WINDOW);
-  const h = hex2(await crypto.subtle.digest("SHA-256", enc3.encode(keyStr + "|" + env.SESSION_KEY))).slice(0, 32);
+  const h = hex3(await crypto.subtle.digest("SHA-256", enc4.encode(keyStr + "|" + env.SESSION_KEY))).slice(0, 32);
   const key = `rl/${kind}/${bucket}/${h}`;
   const obj = await env.BUCKET.get(key);
   const n = obj ? parseInt(await obj.text()) || 0 : 0;
-  if (n >= limit)
-    return true;
+  if (n >= limit) return true;
   await env.BUCKET.put(key, String(n + 1), { customMetadata: { expires: String(Date.now() + RL_WINDOW * 1e3) } });
   return false;
 }
@@ -1234,24 +1247,20 @@ async function patronLogin(req, env, c) {
   }
   const handle = normHandle(body.handle);
   const pass = normPass(body.passcode);
-  if (await rateLimited(env, req, "patron-ip", PATRON_IP_LIMIT))
-    return json({ error: "Too many attempts. Try again later." }, 429, c);
+  if (await rateLimited(env, req, "patron-ip", PATRON_IP_LIMIT)) return json({ error: "Too many attempts. Try again later." }, 429, c);
   if (handle && await rateLimitedKey(env, "patron-handle", handle.toLowerCase(), PATRON_HANDLE_LIMIT))
     return json({ error: "Too many attempts. Try again later." }, 429, c);
   let p = null;
   if (handle) {
     const idObj = await env.BUCKET.get(await handleKey(handle));
-    if (idObj)
-      p = await getPatron(env, await idObj.text());
+    if (idObj) p = await getPatron(env, await idObj.text());
   }
   const parts = p ? p.hash.split("$") : ["pbkdf2", String(PATRON_ITERS), DUMMY_SALT, "x"];
   const got = await hashPassword(pass, parts[2], parseInt(parts[1], 10));
   const ok = !!p && pass.length > 0 && timingEq(got, parts[3]);
-  if (!ok)
-    return json(generic, 401, c);
+  if (!ok) return json(generic, 401, c);
   const token = await makePatronToken(env, p);
-  if (!token)
-    return json(generic, 401, c);
+  if (!token) return json(generic, 401, c);
   return json({ ok: true, token, handle: p.handle }, 200, c);
 }
 __name(patronLogin, "patronLogin");
@@ -1259,8 +1268,7 @@ async function purgePatronSessions(env) {
   const now = Date.now();
   for (const o of await listAll(env, "patrons/sess/", ["customMetadata"])) {
     const exp = parseInt(o.customMetadata && o.customMetadata.exp || "0", 10);
-    if (exp && exp < now)
-      await env.BUCKET.delete(o.key);
+    if (exp && exp < now) await env.BUCKET.delete(o.key);
   }
 }
 __name(purgePatronSessions, "purgePatronSessions");
@@ -1270,13 +1278,10 @@ async function purgeOld(env) {
   let n = 0;
   for (const o of listed.objects || []) {
     const obj = await env.BUCKET.get(o.key);
-    if (!obj)
-      continue;
+    if (!obj) continue;
     const m = JSON.parse(await obj.text());
-    if (m.status !== "pending" || !o.key.startsWith("meta/"))
-      continue;
-    if (new Date(m.createdAt).getTime() >= cutoff)
-      continue;
+    if (m.status !== "pending" || !o.key.startsWith("meta/")) continue;
+    if (new Date(m.createdAt).getTime() >= cutoff) continue;
     await delIdFile(env, m.idKey);
     await delIdFile(env, m.selfieKey);
     const kept = { id: m.id, handle: m.handle, status: "expired", createdAt: m.createdAt, reviewedAt: (/* @__PURE__ */ new Date()).toISOString() };
@@ -1300,17 +1305,12 @@ var VAULT_TYPES = {
 };
 function sniffMedia(b) {
   const img = sniffImage(b);
-  if (img)
-    return img;
+  if (img) return img;
   const s = /* @__PURE__ */ __name((i, n) => String.fromCharCode(...b.slice(i, i + n)), "s");
-  if (b.length >= 6 && (s(0, 6) === "GIF87a" || s(0, 6) === "GIF89a"))
-    return "image/gif";
-  if (b.length >= 4 && b[0] === 26 && b[1] === 69 && b[2] === 223 && b[3] === 163)
-    return "video/webm";
-  if (b.length >= 12 && s(4, 4) === "ftyp")
-    return s(8, 4) === "qt  " ? "video/quicktime" : "video/mp4";
-  if (b.length >= 8 && ["moov", "mdat", "wide", "free", "skip"].includes(s(4, 4)))
-    return "video/quicktime";
+  if (b.length >= 6 && (s(0, 6) === "GIF87a" || s(0, 6) === "GIF89a")) return "image/gif";
+  if (b.length >= 4 && b[0] === 26 && b[1] === 69 && b[2] === 223 && b[3] === 163) return "video/webm";
+  if (b.length >= 12 && s(4, 4) === "ftyp") return s(8, 4) === "qt  " ? "video/quicktime" : "video/mp4";
+  if (b.length >= 8 && ["moov", "mdat", "wide", "free", "skip"].includes(s(4, 4))) return "video/quicktime";
   return null;
 }
 __name(sniffMedia, "sniffMedia");
@@ -1333,9 +1333,7 @@ async function listVault(env) {
   const out = [];
   for (let i = 0; i < objs.length; i += 25) {
     const batch = await Promise.all(objs.slice(i, i + 25).map((o) => getJson(env, o.key).catch(() => null)));
-    for (const m of batch)
-      if (m)
-        out.push(m);
+    for (const m of batch) if (m) out.push(m);
   }
   out.sort((a, b) => a.createdAt < b.createdAt ? 1 : -1);
   return out;
@@ -1351,12 +1349,9 @@ async function vaultCreateUpload(req, env) {
   }
   const size = Number(body.size);
   const declared = String(body.type || "");
-  if (!VAULT_TYPES[declared])
-    return json({ error: "only JPEG, PNG, WebP, GIF photos or MP4, WebM, MOV videos" }, 415);
-  if (!Number.isFinite(size) || size <= 0)
-    return json({ error: "empty file" }, 400);
-  if (size > VAULT_MAX)
-    return json({ error: "file is over 20 GB" }, 413);
+  if (!VAULT_TYPES[declared]) return json({ error: "only JPEG, PNG, WebP, GIF photos or MP4, WebM, MOV videos" }, 415);
+  if (!Number.isFinite(size) || size <= 0) return json({ error: "empty file" }, 400);
+  if (size > VAULT_MAX) return json({ error: "file is over 20 GB" }, 413);
   const id = uid();
   const mpu = await env.BUCKET.createMultipartUpload(vaultMediaKey(id), { httpMetadata: { contentType: declared } });
   const pend = {
@@ -1377,8 +1372,7 @@ async function vaultCreateUpload(req, env) {
 __name(vaultCreateUpload, "vaultCreateUpload");
 async function vaultAbort(env, id) {
   const pend = await getJson(env, vaultPendKey(id));
-  if (!pend)
-    return false;
+  if (!pend) return false;
   try {
     await env.BUCKET.resumeMultipartUpload(vaultMediaKey(id), pend.uploadId).abort();
   } catch {
@@ -1389,14 +1383,11 @@ async function vaultAbort(env, id) {
 __name(vaultAbort, "vaultAbort");
 async function vaultUploadPart(req, env, id, n) {
   const pend = await getJson(env, vaultPendKey(id));
-  if (!pend)
-    return json({ error: "upload not found" }, 404);
-  if (!(n >= 1 && n <= pend.parts))
-    return json({ error: "bad part number" }, 400);
+  if (!pend) return json({ error: "upload not found" }, 404);
+  if (!(n >= 1 && n <= pend.parts)) return json({ error: "bad part number" }, 400);
   const expect = n < pend.parts ? VAULT_PART : pend.size - VAULT_PART * (pend.parts - 1);
   const len = parseInt(req.headers.get("Content-Length") || "-1", 10);
-  if (len !== expect)
-    return json({ error: `part ${n} must be ${expect} bytes` }, 400);
+  if (len !== expect) return json({ error: `part ${n} must be ${expect} bytes` }, 400);
   const mpu = env.BUCKET.resumeMultipartUpload(vaultMediaKey(id), pend.uploadId);
   let value = req.body;
   if (n === 1) {
@@ -1416,10 +1407,8 @@ async function vaultUploadPart(req, env, id, n) {
 __name(vaultUploadPart, "vaultUploadPart");
 async function vaultComplete(req, env, id) {
   const pend = await getJson(env, vaultPendKey(id));
-  if (!pend)
-    return json({ error: "upload not found" }, 404);
-  if (!pend.sniffed)
-    return json({ error: "first part not uploaded" }, 400);
+  if (!pend) return json({ error: "upload not found" }, 404);
+  if (!pend.sniffed) return json({ error: "first part not uploaded" }, 400);
   let body;
   try {
     body = await req.json();
@@ -1427,8 +1416,7 @@ async function vaultComplete(req, env, id) {
     return json({ error: "bad json" }, 400);
   }
   const parts = (Array.isArray(body.parts) ? body.parts : []).map((p) => ({ partNumber: parseInt(p.partNumber, 10), etag: String(p.etag || "") })).sort((a, b) => a.partNumber - b.partNumber);
-  if (parts.length !== pend.parts || parts.some((p, i) => p.partNumber !== i + 1 || !p.etag))
-    return json({ error: "missing parts" }, 400);
+  if (parts.length !== pend.parts || parts.some((p, i) => p.partNumber !== i + 1 || !p.etag)) return json({ error: "missing parts" }, 400);
   const mpu = env.BUCKET.resumeMultipartUpload(vaultMediaKey(id), pend.uploadId);
   await mpu.complete(parts);
   const head = await env.BUCKET.head(vaultMediaKey(id));
@@ -1454,18 +1442,15 @@ async function vaultComplete(req, env, id) {
 __name(vaultComplete, "vaultComplete");
 async function vaultEdit(req, env, id) {
   const m = await getJson(env, vaultMetaKey(id));
-  if (!m)
-    return json({ error: "not found" }, 404);
+  if (!m) return json({ error: "not found" }, 404);
   let body;
   try {
     body = await req.json();
   } catch {
     return json({ error: "bad json" }, 400);
   }
-  if ("title" in body)
-    m.title = cleanText(body.title, 140);
-  if ("caption" in body)
-    m.caption = cleanText(body.caption, 1e3);
+  if ("title" in body) m.title = cleanText(body.title, 140);
+  if ("caption" in body) m.caption = cleanText(body.caption, 1e3);
   m.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   await putJson(env, vaultMetaKey(id), m);
   return json({ ok: true, item: publicItem(m) });
@@ -1473,8 +1458,7 @@ async function vaultEdit(req, env, id) {
 __name(vaultEdit, "vaultEdit");
 async function vaultDelete(env, id) {
   const m = await getJson(env, vaultMetaKey(id));
-  if (!m)
-    return false;
+  if (!m) return false;
   await env.BUCKET.delete(vaultMediaKey(id));
   await env.BUCKET.delete(vaultMetaKey(id));
   return true;
@@ -1484,16 +1468,14 @@ async function purgeVaultPending(env) {
   const cutoff = Date.now() - 2 * 86400 * 1e3;
   for (const o of await listAll(env, "vault/pending/")) {
     const p = await getJson(env, o.key).catch(() => null);
-    if (p && isId(p.id) && new Date(p.createdAt).getTime() < cutoff)
-      await vaultAbort(env, p.id);
+    if (p && isId(p.id) && new Date(p.createdAt).getTime() < cutoff) await vaultAbort(env, p.id);
   }
 }
 __name(purgeVaultPending, "purgeVaultPending");
 async function serveVaultObject(req, env, meta) {
   const key = vaultMediaKey(meta.id);
   const head = await env.BUCKET.head(key);
-  if (!head)
-    return resp("not found", 404);
+  if (!head) return resp("not found", 404);
   const size = head.size;
   const base = {
     "Content-Type": meta.type,
@@ -1506,29 +1488,23 @@ async function serveVaultObject(req, env, meta) {
   let start = 0, end = size - 1, partial = false;
   if (rh) {
     const m = /^bytes=(\d*)-(\d*)$/.exec(rh.trim());
-    if (!m || m[1] === "" && m[2] === "")
-      return resp(null, 416, { ...base, "Content-Range": `bytes */${size}` });
+    if (!m || m[1] === "" && m[2] === "") return resp(null, 416, { ...base, "Content-Range": `bytes */${size}` });
     if (m[1] === "") {
       const n = parseInt(m[2], 10);
       start = Math.max(0, size - n);
     } else {
       start = parseInt(m[1], 10);
-      if (m[2] !== "")
-        end = Math.min(parseInt(m[2], 10), size - 1);
+      if (m[2] !== "") end = Math.min(parseInt(m[2], 10), size - 1);
     }
-    if (start >= size || start > end)
-      return resp(null, 416, { ...base, "Content-Range": `bytes */${size}` });
+    if (start >= size || start > end) return resp(null, 416, { ...base, "Content-Range": `bytes */${size}` });
     partial = true;
   }
   const len = end - start + 1;
   const h = { ...base, "Content-Length": String(len) };
-  if (partial)
-    h["Content-Range"] = `bytes ${start}-${end}/${size}`;
-  if (req.method === "HEAD")
-    return resp(null, partial ? 206 : 200, h);
+  if (partial) h["Content-Range"] = `bytes ${start}-${end}/${size}`;
+  if (req.method === "HEAD") return resp(null, partial ? 206 : 200, h);
   const obj = await env.BUCKET.get(key, partial ? { range: { offset: start, length: len } } : {});
-  if (!obj)
-    return resp("not found", 404);
+  if (!obj) return resp("not found", 404);
   return resp(obj.body, partial ? 206 : 200, h);
 }
 __name(serveVaultObject, "serveVaultObject");
@@ -1546,18 +1522,13 @@ __name(signedMediaUrl, "signedMediaUrl");
 async function servePatronMedia(req, env, url, id) {
   const q = url.searchParams;
   const pid = q.get("p") || "", sid = q.get("s") || "", exp = q.get("exp") || "", sig = q.get("sig") || "";
-  if (!isId(id) || !isId(pid) || !isId(sid) || !/^\d{10,16}$/.test(exp) || !sig)
-    return resp("forbidden", 403);
-  if (!timingEq(await mediaSig(env, id, pid, sid, exp), sig))
-    return resp("forbidden", 403);
-  if (!(Date.now() < parseInt(exp, 10)))
-    return resp("link expired", 403);
+  if (!isId(id) || !isId(pid) || !isId(sid) || !/^\d{10,16}$/.test(exp) || !sig) return resp("forbidden", 403);
+  if (!timingEq(await mediaSig(env, id, pid, sid, exp), sig)) return resp("forbidden", 403);
+  if (!(Date.now() < parseInt(exp, 10))) return resp("link expired", 403);
   const p = await getPatron(env, pid);
-  if (!p || !await sessionCurrent(env, p, sid))
-    return resp("forbidden", 403);
+  if (!p || !await sessionCurrent(env, p, sid)) return resp("forbidden", 403);
   const meta = await getJson(env, vaultMetaKey(id));
-  if (!meta)
-    return resp("not found", 404);
+  if (!meta) return resp("not found", 404);
   return serveVaultObject(req, env, meta);
 }
 __name(servePatronMedia, "servePatronMedia");
@@ -1858,7 +1829,7 @@ async function loadVaultAdmin(){
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 <\/script></body></html>`;
-var src_default = {
+var index_default = {
   async fetch(req, env) {
     const url = new URL(req.url);
     const path = url.pathname;
@@ -1867,55 +1838,40 @@ var src_default = {
         const c = cors(env, req);
         return c ? resp(null, 204, c) : resp(null, 403);
       }
-      if (path === "/apply" && req.method === "POST")
-        return handleApply(req, env);
+      if (path === "/apply" && req.method === "POST") return handleApply(req, env);
       const mm = /^\/patron\/media\/([0-9a-f]{32})$/.exec(path);
-      if (mm && (req.method === "GET" || req.method === "HEAD"))
-        return servePatronMedia(req, env, url, mm[1]);
+      if (mm && (req.method === "GET" || req.method === "HEAD")) return servePatronMedia(req, env, url, mm[1]);
       if (path.startsWith("/patron/")) {
         const c = patronCors(env, req);
-        if (req.method === "OPTIONS")
-          return c ? resp(null, 204, c) : resp(null, 403);
-        if (!c)
-          return json({ error: "origin not allowed" }, 403);
-        if (path === "/patron/login" && req.method === "POST")
-          return patronLogin(req, env, c);
+        if (req.method === "OPTIONS") return c ? resp(null, 204, c) : resp(null, 403);
+        if (!c) return json({ error: "origin not allowed" }, 403);
+        if (path === "/patron/login" && req.method === "POST") return patronLogin(req, env, c);
         if (path === "/patron/logout" && req.method === "POST") {
           const s = await checkPatron(env, req);
-          if (s)
-            await env.BUCKET.delete(`patrons/sess/${s.patron.id}/${s.sid}`);
+          if (s) await env.BUCKET.delete(`patrons/sess/${s.patron.id}/${s.sid}`);
           return json({ ok: true }, 200, c);
         }
         if (path === "/patron/vault" && req.method === "GET") {
           const s = await checkPatron(env, req);
-          if (!s)
-            return json({ error: "unauthorized" }, 401, c);
+          if (!s) return json({ error: "unauthorized" }, 401, c);
           const items = [];
-          for (const m of await listVault(env))
-            items.push({ ...publicItem(m), url: await signedMediaUrl(env, url.origin, m.id, s) });
+          for (const m of await listVault(env)) items.push({ ...publicItem(m), url: await signedMediaUrl(env, url.origin, m.id, s) });
           return json({ ok: true, handle: s.patron.handle, html: VAULT_HTML, items, expiresIn: VAULT_URL_TTL / 1e3 }, 200, c);
         }
+        if (path === "/patron/desk-message" && req.method === "POST") return deskMessage(req, env, c, recoveryApi());
         const recoveryRoute = recoveryPaths(path, req.method);
-        if (recoveryRoute === "prefetch")
-          return json({ error: "method not allowed" }, 405, c);
-        if (recoveryRoute === "request")
-          return recoveryRequest(req, env, c, recoveryApi());
-        if (recoveryRoute === "complete")
-          return recoveryComplete(req, env, c, recoveryApi());
-        if (recoveryRoute === "enroll")
-          return recoveryEnroll(req, env, c, recoveryApi());
-        if (recoveryRoute === "confirm")
-          return recoveryConfirmEmail(req, env, c, recoveryApi());
+        if (recoveryRoute === "prefetch") return json({ error: "method not allowed" }, 405, c);
+        if (recoveryRoute === "request") return recoveryRequest(req, env, c, recoveryApi());
+        if (recoveryRoute === "complete") return recoveryComplete(req, env, c, recoveryApi());
+        if (recoveryRoute === "enroll") return recoveryEnroll(req, env, c, recoveryApi());
+        if (recoveryRoute === "confirm") return recoveryConfirmEmail(req, env, c, recoveryApi());
         return json({ error: "not found" }, 404, c);
       }
-      if (path === "/banner" && (req.method === "GET" || req.method === "HEAD"))
-        return serveBanner(env, req.method === "HEAD");
-      if (path === "/admin" || path === "/admin/")
-        return resp(ADMIN_HTML, 200, { "Content-Type": "text/html; charset=utf-8" });
+      if (path === "/banner" && (req.method === "GET" || req.method === "HEAD")) return serveBanner(env, req.method === "HEAD");
+      if (path === "/admin" || path === "/admin/") return resp(ADMIN_HTML, 200, { "Content-Type": "text/html; charset=utf-8" });
       if (path === "/admin/login" && req.method === "POST") {
         try {
-          if (await rateLimited(env, req, "login", LOGIN_LIMIT))
-            return json({ error: "rate limited" }, 429);
+          if (await rateLimited(env, req, "login", LOGIN_LIMIT)) return json({ error: "rate limited" }, 429);
           let body;
           try {
             body = await req.json();
@@ -1924,8 +1880,7 @@ var src_default = {
           }
           const okPw = await verifyPassword(env, body.password || "");
           const okTotp = await verifyTotp(env, body.totp || "");
-          if (!okPw || !okTotp)
-            return json({ error: "invalid credentials" }, 401);
+          if (!okPw || !okTotp) return json({ error: "invalid credentials" }, 401);
           const token = await makeSession(env);
           return json({ ok: true }, 200, { "Set-Cookie": sessionCookie(token) });
         } catch (e) {
@@ -1936,41 +1891,32 @@ var src_default = {
         return json({ ok: true }, 200, { "Set-Cookie": "hotm_admin=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0" });
       }
       const authed = await checkSession(env, req.headers.get("Cookie"));
-      if (path.startsWith("/admin/api/") && !authed)
-        return json({ error: "unauthorized" }, 401);
-      if (path === "/admin/api/list" && req.method === "GET")
-        return json({ items: await listPending(env) });
+      if (path.startsWith("/admin/api/") && !authed) return json({ error: "unauthorized" }, 401);
+      if (path === "/admin/api/list" && req.method === "GET") return json({ items: await listPending(env) });
       if (path === "/admin/api/decide" && req.method === "POST") {
-        if (!sameOriginAdmin(req, url))
-          return json({ error: "forbidden" }, 403);
+        if (!sameOriginAdmin(req, url)) return json({ error: "forbidden" }, 403);
         let body;
         try {
           body = await req.json();
         } catch {
           return json({ error: "bad json" }, 400);
         }
-        if (!["approved", "rejected"].includes(body.decision))
-          return json({ error: "bad decision" }, 400);
+        if (!["approved", "rejected"].includes(body.decision)) return json({ error: "bad decision" }, 400);
         let created = null;
         if (body.decision === "approved") {
           const meta = await getMeta(env, String(body.id || ""));
-          if (!meta || meta.status !== "pending")
-            return json({ error: "not found" }, 404);
+          if (!meta || meta.status !== "pending") return json({ error: "not found" }, 404);
           created = await createPatron(env, String(body.handle || "").trim() || meta.handle || meta.email, "approved application");
-          if (created.error)
-            return json({ error: created.error }, 409);
+          if (created.error) return json({ error: created.error }, 409);
         }
         const kept = await decide(env, body.id, body.decision);
-        if (!kept)
-          return json({ error: "not found" }, 404);
+        if (!kept) return json({ error: "not found" }, 404);
         return json({ ok: true, kept, ...created || {} });
       }
-      if (path === "/admin/api/patrons" && req.method === "GET")
-        return json({ items: await listPatrons(env) });
+      if (path === "/admin/api/patrons" && req.method === "GET") return json({ items: await listPatrons(env) });
       const pm = /^\/admin\/api\/patrons(?:\/([0-9a-f]{32}))?(\/reset)?$/.exec(path);
       if (pm && req.method !== "GET") {
-        if (!sameOriginAdmin(req, url))
-          return json({ error: "forbidden" }, 403);
+        if (!sameOriginAdmin(req, url)) return json({ error: "forbidden" }, 403);
         if (!pm[1] && req.method === "POST") {
           let body;
           try {
@@ -1991,52 +1937,39 @@ var src_default = {
         return json({ error: "method not allowed" }, 405);
       }
       if (path === "/admin/api/banner") {
-        if (req.method === "GET")
-          return json(await bannerInfo(env));
+        if (req.method === "GET") return json(await bannerInfo(env));
         if (req.method === "POST" || req.method === "DELETE") {
-          if (!sameOriginAdmin(req, url))
-            return json({ error: "forbidden" }, 403);
-          if (req.method === "POST")
-            return uploadBanner(req, env);
+          if (!sameOriginAdmin(req, url)) return json({ error: "forbidden" }, 403);
+          if (req.method === "POST") return uploadBanner(req, env);
           await env.BUCKET.delete(BANNER_KEY);
           return json({ ok: true, exists: false });
         }
         return json({ error: "method not allowed" }, 405);
       }
-      if (path === "/admin/api/vault" && req.method === "GET")
-        return json({ items: (await listVault(env)).map(publicItem) });
+      if (path === "/admin/api/vault" && req.method === "GET") return json({ items: (await listVault(env)).map(publicItem) });
       if (path.startsWith("/admin/api/vault/")) {
         const vf = /^\/admin\/api\/vault\/([0-9a-f]{32})\/file$/.exec(path);
         if (vf && (req.method === "GET" || req.method === "HEAD")) {
           const m = await getJson(env, vaultMetaKey(vf[1]));
           return m ? serveVaultObject(req, env, m) : resp("not found", 404);
         }
-        if (!sameOriginAdmin(req, url))
-          return json({ error: "forbidden" }, 403);
-        if (path === "/admin/api/vault/uploads" && req.method === "POST")
-          return vaultCreateUpload(req, env);
+        if (!sameOriginAdmin(req, url)) return json({ error: "forbidden" }, 403);
+        if (path === "/admin/api/vault/uploads" && req.method === "POST") return vaultCreateUpload(req, env);
         const vu = /^\/admin\/api\/vault\/uploads\/([0-9a-f]{32})(?:\/(complete|part\/(\d{1,5})))?$/.exec(path);
         if (vu) {
-          if (vu[3] && req.method === "PUT")
-            return vaultUploadPart(req, env, vu[1], parseInt(vu[3], 10));
-          if (vu[2] === "complete" && req.method === "POST")
-            return vaultComplete(req, env, vu[1]);
-          if (!vu[2] && req.method === "DELETE")
-            return json({ ok: await vaultAbort(env, vu[1]) });
+          if (vu[3] && req.method === "PUT") return vaultUploadPart(req, env, vu[1], parseInt(vu[3], 10));
+          if (vu[2] === "complete" && req.method === "POST") return vaultComplete(req, env, vu[1]);
+          if (!vu[2] && req.method === "DELETE") return json({ ok: await vaultAbort(env, vu[1]) });
           return json({ error: "method not allowed" }, 405);
         }
         const vi = /^\/admin\/api\/vault\/([0-9a-f]{32})$/.exec(path);
-        if (vi && req.method === "PATCH")
-          return vaultEdit(req, env, vi[1]);
-        if (vi && req.method === "DELETE")
-          return await vaultDelete(env, vi[1]) ? json({ ok: true }) : json({ error: "not found" }, 404);
+        if (vi && req.method === "PATCH") return vaultEdit(req, env, vi[1]);
+        if (vi && req.method === "DELETE") return await vaultDelete(env, vi[1]) ? json({ ok: true }) : json({ error: "not found" }, 404);
         return json({ error: "not found" }, 404);
       }
       const im = /^\/admin\/api\/image\/([0-9a-f]{32})\/(id|selfie)$/.exec(path);
-      if (im && req.method === "GET")
-        return serveImage(env, im[1], im[2]);
-      if (path === "/health")
-        return json({ ok: true });
+      if (im && req.method === "GET") return serveImage(env, im[1], im[2]);
+      if (path === "/health") return json({ ok: true });
       return resp("not found", 404);
     } catch (e) {
       return json({ error: "server error" }, 500);
@@ -2052,6 +1985,6 @@ var src_default = {
 export {
   PASSCODE_MIN,
   RECOVERY_TTL_MS,
-  src_default as default
+  index_default as default
 };
 //# sourceMappingURL=index.js.map
