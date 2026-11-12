@@ -9,9 +9,9 @@ var TIMEOUT_MS = 12e3;
 var enc = new TextEncoder();
 function appPassword(env) {
   const raw = String(env.SMTP_APP_PASSWORD || "");
-  if (/[\r\n\u0000]/.test(raw))
+  if (raw.includes("\0"))
     return null;
-  const compact = raw.replace(/ /g, "");
+  const compact = raw.replace(/[\s\u200B-\u200D\uFEFF]/g, "");
   if (!/^[A-Za-z]{16}$/.test(compact))
     return null;
   return compact;

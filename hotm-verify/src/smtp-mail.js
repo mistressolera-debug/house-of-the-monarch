@@ -12,8 +12,10 @@ const enc = new TextEncoder();
 
 export function appPassword(env) {
   const raw = String(env.SMTP_APP_PASSWORD || "");
-  if (/[\r\n\u0000]/.test(raw)) return null;
-  const compact = raw.replace(/ /g, "");
+  if (raw.includes("\u0000")) return null;
+  // Strip Unicode whitespace (including NBSP and newlines) and zero-width
+  // characters often copied from a browser or dashboard paste.
+  const compact = raw.replace(/[\s\u200B-\u200D\uFEFF]/g, "");
   if (!/^[A-Za-z]{16}$/.test(compact)) return null;
   return compact;
 }

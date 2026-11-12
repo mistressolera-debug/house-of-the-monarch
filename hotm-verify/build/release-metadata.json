@@ -1,14 +1,14 @@
 {
   "artifact": "candidate Worker module, not deployed",
   "script_name": "hotm-verify",
-  "built_at": "2026-11-12T08:29:00.550Z",
+  "built_at": "2026-11-12T08:46:55.476Z",
   "builder": "wrangler 3.114.17 deploy --dry-run --outdir build --keep-vars",
   "compatibility_date": "2024-09-01",
   "compatibility_flags": [],
   "usage_model": "standard",
   "module": "build/index.js",
-  "sha256": "3bcfe51ee2b5ffc29eab829e80e432ffc7e4b290fd1a8c76237e365f5afc9877",
-  "bytes": 85285,
+  "sha256": "90a1284007ede710893cd3205e70776cffe040627d1b5b7998752b54d917f2ee",
+  "bytes": 85301,
   "source_map": "removed",
   "baseline_live": {
     "version_number": 18,
