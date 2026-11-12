@@ -3,6 +3,7 @@ import { createHash, randomBytes, webcrypto } from "node:crypto";
 import { test } from "node:test";
 import worker, { PASSCODE_MIN, RECOVERY_TTL_MS } from "../src/index.js";
 import { scriptedSmtp } from "./scripted-smtp.mjs";
+import { WORKSPACE_SENDER } from "../src/smtp-mail.js";
 
 const SITE = "https://houseofthemonarch.com";
 const WORKER = "https://hotm-verify.mistressolera.workers.dev";
@@ -838,7 +839,7 @@ test("a configured Workspace SMTP socket mails only the verified patron", async 
   env.SMTP_CONNECT = (address, options) => server.connect(address, options);
   const res = await requestReset(env, "Cedar_Smtp", {
     email: "other@example.net",
-    to: "monarchofthemoonshop@gmail.com",
+    to: "attacker@example.net",
   }, "203.0.113.90");
   assert.equal(res.status, 200);
   assert.equal(res.text, '{"ok":true}');
@@ -849,7 +850,8 @@ test("a configured Workspace SMTP socket mails only the verified patron", async 
     server.sent.filter((line) => line.startsWith("RCPT TO:")),
     ["RCPT TO:<smtp-patron@example.com>"],
   );
-  assert.equal(server.sent.join("\n").includes("monarchofthemoonshop@gmail.com"), false);
+  assert.ok(server.sent.includes("MAIL FROM:<" + WORKSPACE_SENDER + ">"));
+  assert.equal(server.sent.join("\n").includes("attacker@example.net"), false);
   assert.equal(server.sent.join("\n").includes("other@example.net"), false);
   assert.equal(res.text.includes("abcdefghijklmnop"), false);
   assert.equal(env.logs.some((line) => line.includes("abcdefghijklmnop") || line.includes("court-key-reset")), false);

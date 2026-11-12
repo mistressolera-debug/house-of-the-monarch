@@ -2,7 +2,7 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // src/smtp-mail.js
-var WORKSPACE_SENDER = "sj@monarchofthemoon.shop";
+var WORKSPACE_SENDER = "monarchofthemoonshop@gmail.com";
 var SMTP_HOST = "smtp.gmail.com";
 var SMTP_PORT = 465;
 var TIMEOUT_MS = 12e3;
@@ -2054,3 +2054,4 @@ export {
   RECOVERY_TTL_MS,
   src_default as default
 };
+//# sourceMappingURL=index.js.map

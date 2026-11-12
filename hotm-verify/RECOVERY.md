@@ -17,9 +17,9 @@ This tree started from a local worker dated Nov 7 2026 08:52 America/Toronto. It
 
 ## Mail is not live
 
-The runtime sender is `src/smtp-mail.js`. It connects with Workers `connect()` to `smtp.gmail.com` port 465 and `secureTransport: "on"` (implicit TLS). Port 25 is not used. `AUTH PLAIN` is written only on that TLS socket. The AUTH user and From address are fixed to `sj@monarchofthemoon.shop`. The recipient is the verified patron address passed by the recovery code. A test double `env.MAIL.send` still replaces the socket in unit tests. Those tests do not deliver mail.
+The runtime sender is `src/smtp-mail.js`. It connects with Workers `connect()` to `smtp.gmail.com` port 465 and `secureTransport: "on"` (implicit TLS). Port 25 is not used. `AUTH PLAIN` is written only on that TLS socket. The AUTH user and From address are fixed to `monarchofthemoonshop@gmail.com`. The recipient is the verified patron address passed by the recovery code. A test double `env.MAIL.send` still replaces the socket in unit tests. Those tests do not deliver mail.
 
-The adapter stays closed until `SMTP_APP_PASSWORD` is a 16-letter Google app password. That value is not in the repo. `SMTP_USER`, if set, must be exactly `sj@monarchofthemoon.shop`. The SMTP host is not configurable. See `DEPLOY.md` for the mailbox owner's steps and the release order.
+The adapter stays closed until `SMTP_APP_PASSWORD` is a 16-letter Google app password. That value is not in the repo. `SMTP_USER`, if set, must be exactly `monarchofthemoonshop@gmail.com`. The SMTP host is not configurable. See `DEPLOY.md` for the mailbox owner's steps and the release order.
 
 The site and the worker have to be released together. The page posts to `/patron/recovery/*`. Until both are current, the form cannot finish a reset. Releasing either one is a separate decision from this branch.
 

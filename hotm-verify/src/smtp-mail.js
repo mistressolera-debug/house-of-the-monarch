@@ -1,10 +1,10 @@
-// Google Workspace SMTP for the one mailbox the house selected.
+// Gmail SMTP for the one mailbox the house selected.
 // Implicit TLS to smtp.gmail.com:465 via Workers connect({ secureTransport: "on" }).
 // Port 25 is refused. AUTH PLAIN is sent only on that TLS socket.
 // The From address and AUTH username are fixed. The recipient is the address
 // the caller already resolved from the patron record. No Cc, Bcc, or override.
 
-export const WORKSPACE_SENDER = "sj@monarchofthemoon.shop";
+export const WORKSPACE_SENDER = "monarchofthemoonshop@gmail.com";
 export const SMTP_HOST = "smtp.gmail.com";
 export const SMTP_PORT = 465;
 const TIMEOUT_MS = 12000;
